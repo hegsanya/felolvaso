@@ -1126,7 +1126,26 @@ function loadLastOpenedFile() {
     if (lastOpenedFileName && lastOpenedFileContent) {
         document.getElementById('fileNameDisplay').value = lastOpenedFileName;
         readCSVFromContent(lastOpenedFileContent);
+    } else {
+        loadDefaultCSV();
     }
+}
+
+// Alapértelmezett szótár: ha nincs korábban megnyitott fájl, a weboldal
+// mellett lévő CSV töltődik be. Helyi fájlként (file://) megnyitva a
+// böngésző ezt nem engedi – ilyenkor marad a FÁJLKEZELŐ.
+const DEFAULT_CSV = "SZOTAR_261005.csv";
+
+function loadDefaultCSV() {
+    if (location.protocol === "file:") return;
+    fetch(DEFAULT_CSV)
+        .then(response => response.ok ? response.text() : null)
+        .then(contents => {
+            if (contents && readCSVFromContent(contents)) {
+                document.getElementById('fileNameDisplay').value = DEFAULT_CSV;
+            }
+        })
+        .catch(() => {});
 }
 
 //
