@@ -1,0 +1,2358 @@
+<!DOCTYPE html>
+<html lang="hu">
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FELOLVASÓ</title>
+<style>
+    /* Sötét mód */
+    .dark-mode {
+        background-color: #000000;
+        color: #fff;
+    }
+    .dark-mode textarea {
+        background-color: #000000;
+        color: #fff;
+    }
+    .blue-mode {
+        background-color: rgb(40, 40, 40);
+        color: #fff;
+    }
+    .blue-mode textarea {
+        background-color: rgb(40, 40, 40);
+        color: #fff;
+    }
+    .button {
+        font-size: 18px;
+        margin-right: 5px;
+        background-color: lightgray;
+        color: black;
+        border-radius: 5px; /* A kívánt kerekítés mérete pixelben */
+    }
+    .button_lepteto {
+        font-size: 18px;
+        margin-right: 10px;
+        background-color: rgb(23, 54, 93);
+        box-shadow: 0px 0px 10px cyan;
+        color: white;
+        border-radius: 5px; /* A kívánt kerekítés mérete pixelben */
+    }
+    .checkbox {
+        transform: scale(1.5); /* Növelje 1.5-szeresére a méretet */
+        -webkit-transform: scale(1.5); /* Safari */
+        -moz-transform: scale(1.5); /* Firefox */
+        -ms-transform: scale(1.5); /* Internet Explorer */
+        -o-transform: scale(1.5); /* Opera */
+        margin: 10px; /* Igény szerint állítsd be a margót */
+    }
+    .cimcsoport {
+        text-align: center;
+    }
+    .lablec {
+        text-align: center;
+    }
+    .FOCIM{
+        background-color: rgb(23, 54, 93);
+        color: rgb(255, 255, 255); 
+    }
+    textarea{
+      resize: none;
+    }
+
+    /*
+    #csoport1, #csoport2,  #csoport3, #csoport4 {
+      display: block;
+      margin: 0 auto;
+      text-align: center;
+      height: 100%;
+    } 
+    */ 
+
+    #csoport1 input[type="text"],
+    #csoport2 input[type="text"],
+    #csoport3 input[type="text"],
+    #csoport4 input[type="text"],
+    #csoport5 input[type="text"],
+    #csoport6 input[type="text"] {
+      width: 200px;
+    }
+
+    brKICSI {
+        display: block;
+        line-height: 25px;
+    }
+    .mezo {
+        box-shadow: 0px 0px 0px blue;
+        /*font-family: 'Comic Sans MS', cursive;*/
+        /*font-family: 'Patrick Hand', cursive;*/
+        /*font-family: 'Dancing Script', cursive;*/
+        /*font-family: 'Kalam', cursive;*/
+        /*font-family: 'Kalam', 'Patrick Hand', 'Dancing Script', cursive;*/
+    }
+    .log-hidden {
+        display: none;
+    }
+
+    .log-visible {
+        display: block;
+    }
+
+    #logContainer {
+        display: none; /* Alapértelmezett állapot: rejtve van */
+    }
+</style>
+</head>
+<body>
+
+<!-- v7.4: Képernyő ébren tartásához használt néma mini videó.
+     - nincs hangsávja, és némítva is van → nem zavarja a felolvasást
+     - nem lehet teljesen elrejteni (display:none), mert akkor a böngésző
+       leállítja; ezért csak 4x4 pixeles és szinte átlátszó, a sarokban -->
+<video id="ebrenVideo" muted playsinline loop
+       style="position: fixed; bottom: 0; right: 0; width: 4px; height: 4px; opacity: 0.05; pointer-events: none;"></video>
+
+<div class="cimcsoport">
+        <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
+        <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.4</label>
+        <div class="FOCIM">
+        <hr>
+        <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
+        <hr>
+        </div>
+        <input type="file" style="display:none; width: 180px;" id="fileInput" onchange="readCSV(this.files[0])">
+        <input type="text" style="font-size: 18px; width: 180px;" id="fileNameDisplay" placeholder="Choose a file..." readonly>
+        <button type="button" onclick="document.getElementById('fileInput').click()" class="button">FÁJLKEZELŐ</button>
+        <button onclick="toggleSortOrder()" id="sortButton" class="button">Z-A</button>
+        <br>
+        <label class="row-counter" style="font-size: 18px; margin-left: 5px;" id="rowCounter"></label>
+        <label for="temaSelect" style="font-size: 18px; margin-left: 20px;">Téma:</label>
+        <label id="temaLabel" style="font-size: 18px; width: 100px;"></label>
+        <label id="datumLabel" style="font-size: 18px; width: 100px; margin-left: 20px;"></label>
+        <br>
+</div>
+
+<div id="csoportA">
+<div id="csoport1">
+     <textarea id="foreignField" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+     <br>
+     <select id="languageSelect" style="font-size: 18px; border-radius: 5px;" onchange="updateFields(); saveSettings()">
+      <option value="hu-HU">Hungarian</option>
+      <option value="en-AU">Australia</option>
+      <option value="en-GB">English</option>
+      <option value="en-US">USA</option>
+      <option value="de-DE">German</option>
+      <option value="es-ES">Spanish</option>
+      <option value="es-US">Spanish US</option>
+      <option value="fr-FR">French</option>
+      <option value="fr-CA">French CA</option>
+      <option value="it-IT">Italian</option>
+      <option value="tr-TR">Turkish</option>
+     </select>
+    <label for="speedInput" style="font-size: 18px; margin-left: 15px;">Tempó:</label>
+    <input type="number" id="speedInput" style="font-size: 18px; width: 50px;" value="1.3" min="0.1" step="0.1" oninput="saveSettings()">
+    <button id="Felolvas1" style= "font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(1)">FELOLVAS</button>
+    <br>
+    <label>Hang: </label><!-- Kiválasztható nyelvi jelölők -->
+    <input type="radio" id="optionAuto1" name="optionsHang1" value="optionAuto1" checked onchange="toggleVoiceMode(1); saveSettings()">
+    <label for="optionAuto1">Telepített</label>
+    <input type="radio" id="optionBongeszo1" name="optionsHang1" value="optionBongeszo1" onchange="toggleVoiceMode(1); saveSettings()">
+    <label for="optionBongeszo1">Böngésző</label>
+    <label id="charCountLabel" style="font-size: 16px; margin-left: 8px;"></label> <!-- Cimke a mező 1 karaktereinek számához -->
+    <br>
+    <div id="div_Bongeszo1" style="display: block;">
+        <select id="voiceSelect1" style="width: 300px;" onchange="changeVoiceSelect(1)"></select>
+        <button id="BE1" onclick="loadVoice(1)">BE</button>
+    </div>
+</div>
+
+<div id="csoport2">
+     <textarea id="hungarianField" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+     <br>
+     <select id="languageSelectHungarian" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+      <option value="hu-HU">Hungarian</option>
+      <option value="en-AU">Australia</option>
+      <option value="en-GB" selected="">English</option>
+      <option value="en-US">USA</option>
+      <option value="de-DE">German</option>
+      <option value="es-ES">Spanish</option>
+      <option value="es-US">Spanish US</option>
+      <option value="fr-FR">French</option>
+      <option value="fr-CA">French CA</option>
+      <option value="it-IT">Italian</option>
+      <option value="tr-TR">Turkish</option>
+     </select>
+	 <label for="speedInput2" style="font-size: 18px; margin-left: 8px;">Tempó:</label>
+	 <input type="number" id="speedInput2" style="font-size: 18px; width: 50px;" value="0.9" min="0.1" step="0.1" oninput="saveSettings()">
+   <button id="Felolvas2" style= "font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(2)">FELOLVAS</button>
+   <br>
+   <label>Hang: </label>
+	 <input type="radio" id="optionAuto2" name="optionsHang2" value="optionAuto2" checked onchange="toggleVoiceMode(2); saveSettings()">
+	 <label for="optionAuto2">Telepített</label>
+	 <input type="radio" id="optionBongeszo2" name="optionsHang2" value="optionBongeszo2" onchange="toggleVoiceMode(2); saveSettings()">
+	 <label for="optionBongeszo2">Böngésző</label>
+   <label id="charCountLabel2" style="font-size: 16px; margin-left: 8px;"></label> <!-- Cimke a mező 2 karaktereinek számához -->
+   <br>
+   <div id="div_Bongeszo2" style="display: block;">
+      <select id="voiceSelect2" style= "width: 300px;" onchange="changeVoiceSelect(2)"></select>
+      <button id="BE2" onclick="loadVoice(2)">BE</button>
+   </div>
+</div>
+</div>
+
+<div id="csoportB" style="display: none;">
+<div id="csoport3" style="display: none;">
+    <textarea id="hungarianField2" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+    <br>
+
+    <select id="languageSelectHungarian2" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+        <option value="hu-HU">Hungarian</option>
+        <option value="en-AU">Australia</option>
+        <option value="en-GB">English</option>
+        <option value="en-US">USA</option>
+        <option value="de-DE" selected>German</option>
+        <option value="es-ES">Spanish</option>
+        <option value="es-US">Spanish US</option>
+        <option value="fr-FR">French</option>
+        <option value="fr-CA">French CA</option>
+        <option value="it-IT">Italian</option>
+        <option value="tr-TR">Turkish</option>
+    </select>
+
+    <label for="speedInput3" style="font-size: 18px; margin-left: 15px;">Tempó:</label>
+    <input type="number" id="speedInput3" style="font-size: 18px; width: 50px;" value="1" min="0.1" step="0.1" oninput="saveSettings()">
+
+    <button id="Felolvas3" style="font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(3)">FELOLVAS</button>
+
+    <div id="HangJelolok3" style="display: block; margin: 0 auto; text-align: center;">
+        <label>Hang: </label>
+
+        <input type="radio" id="optionAuto3" name="optionsHang3" value="optionAuto3" checked onchange="toggleVoiceMode(3); saveSettings()">
+        <label for="optionAuto3">Telepített</label>
+
+        <input type="radio" id="optionBongeszo3" name="optionsHang3" value="optionBongeszo3" onchange="toggleVoiceMode(3); saveSettings()">
+        <label for="optionBongeszo3">Böngésző</label>
+
+        <label id="charCountLabel3" style="font-size: 16px; margin-left: 20px;"></label>
+        <br>
+
+        <div id="div_Bongeszo3" style="display: block;">
+            <select id="voiceSelect3" style="width: 300px;" onchange="changeVoiceSelect(3)"></select>
+            <button id="BE3" onclick="loadVoice(3)">BE</button>
+        </div>
+    </div>
+</div>
+
+<div id="csoport4" style="display: none;">
+    <textarea id="hungarianField4" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+    <br>
+    <select id="languageSelectHungarian4" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+        <option value="hu-HU">Hungarian</option>
+        <option value="en-AU">Australia</option>
+        <option value="en-GB">English</option>
+        <option value="en-US" selected="">USA</option>
+        <option value="de-DE">German</option>
+        <option value="es-ES">Spanish</option>
+        <option value="es-US">Spanish US</option>
+        <option value="fr-FR">French</option>
+        <option value="fr-CA">French CA</option>
+        <option value="it-IT">Italian</option>
+        <option value="tr-TR">Turkish</option>
+    </select>
+    <label for="speedInput4" style="font-size: 18px; margin-left: 20px;">Tempó:</label>
+    <input type="number" id="speedInput4" style="font-size: 18px; width: 50px;" value="0.9" min="0.1" step="0.1" oninput="saveSettings()">
+    <button id="Felolvas4" style= "font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(4)">FELOLVAS</button>
+   <div id="HangJelolok4" style="display: block; margin: 0 auto; text-align: center;">
+       <!-- Kiválasztható nyelvi jelölők -->
+       <label>Hang: </label>
+       <input type="radio" id="optionAuto4" name="optionsHang4" value="optionAuto4" checked onchange="toggleVoiceMode(4); saveSettings()">
+       <label for="optionAuto4">Telepített</label>
+       <input type="radio" id="optionBongeszo4" name="optionsHang4" value="optionBongeszo4" onchange="toggleVoiceMode(4); saveSettings()">
+       <label for="optionBongeszo4">Böngésző</label>
+       <label id="charCountLabel4" style="font-size: 16px; margin-left: 20px;"></label><!-- Cimke a mező 4 karaktereinek számához -->
+       <br>
+       <div id="div_Bongeszo4" style="display: block;">
+        <select id="voiceSelect4" style= "width: 300px;" onchange="changeVoiceSelect(4)"></select>
+        <button id="BE4" onclick="loadVoice(4)">BE</button>
+       </div>
+   </div>
+</div>
+</div>
+
+<div id="csoportC" style="display: none;">
+ <div id="csoport5" style="display: none;">
+    <textarea id="hungarianField5" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+    <br>
+    <select id="languageSelectHungarian5" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+        <option value="hu-HU">Hungarian</option>
+        <option value="en-AU">Australia</option>
+        <option value="en-GB">English</option>
+        <option value="en-US">USA</option>
+        <option value="de-DE">German</option>
+        <option value="es-ES">Spanish</option>
+        <option value="es-US">Spanish US</option>
+        <option value="fr-FR">French</option>
+        <option value="fr-CA">French CA</option>
+        <option value="it-IT">Italian</option>
+        <option value="tr-TR">Turkish</option>
+    </select>
+    <label for="speedInput5" style="font-size: 18px; margin-left: 20px;">Tempó:</label>
+    <input type="number" id="speedInput5" style="font-size: 18px; width: 50px;" value="1" min="0.1" step="0.1" oninput="saveSettings()">
+    <button id="Felolvas5" style="font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(5)">FELOLVAS</button>
+    <div id="HangJelolok5" style="display: block; margin: 0 auto; text-align: center;">
+        <label>Hang: </label>
+
+        <input type="radio" id="optionAuto5" name="optionsHang5" value="optionAuto5" checked onchange="toggleVoiceMode(5); saveSettings()">
+        <label for="optionAuto5">Telepített</label>
+
+        <input type="radio" id="optionBongeszo5" name="optionsHang5" value="optionBongeszo5" onchange="toggleVoiceMode(5); saveSettings()">
+        <label for="optionBongeszo5">Böngésző</label>
+
+        <label id="charCountLabel5" style="font-size: 16px; margin-left: 20px;"></label>
+        <br>
+
+        <div id="div_Bongeszo5" style="display: block;">
+            <select id="voiceSelect5" style="width: 300px;" onchange="changeVoiceSelect(5)"></select>
+            <button id="BE5" onclick="loadVoice(5)">BE</button>
+        </div>
+    </div>
+ </div>
+
+<div id="csoport6" style="display: none;">
+    <textarea id="hungarianField6" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
+    <br>
+
+    <select id="languageSelectHungarian6" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+        <option value="hu-HU">Hungarian</option>
+        <option value="en-AU">Australia</option>
+        <option value="en-GB">English</option>
+        <option value="en-US">USA</option>
+        <option value="de-DE">German</option>
+        <option value="es-ES">Spanish</option>
+        <option value="es-US">Spanish US</option>
+        <option value="fr-FR">French</option>
+        <option value="fr-CA">French CA</option>
+        <option value="it-IT">Italian</option>
+        <option value="tr-TR">Turkish</option>
+    </select>
+
+    <label for="speedInput6" style="font-size: 18px; margin-left: 20px;">Tempó:</label>
+    <input type="number" id="speedInput6" style="font-size: 18px; width: 50px;" value="1" min="0.1" step="0.1" oninput="saveSettings()">
+
+    <button id="Felolvas6" style="font-size: 18px; font-family: Arial Narrow; margin-left: 10px;" onclick="speakSinglePanel(6)">FELOLVAS</button>
+
+    <div id="HangJelolok6" style="display: block; margin: 0 auto; text-align: center;">
+        <label>Hang: </label>
+
+        <input type="radio" id="optionAuto6" name="optionsHang6" value="optionAuto6" checked onchange="toggleVoiceMode(6); saveSettings()">
+        <label for="optionAuto6">Telepített</label>
+
+        <input type="radio" id="optionBongeszo6" name="optionsHang6" value="optionBongeszo6" onchange="toggleVoiceMode(6); saveSettings()">
+        <label for="optionBongeszo6">Böngésző</label>
+
+        <label id="charCountLabel6" style="font-size: 16px; margin-left: 20px;"></label>
+        <br>
+
+        <div id="div_Bongeszo6" style="display: block;">
+            <select id="voiceSelect6" style="width: 300px;" onchange="changeVoiceSelect(6)"></select>
+            <button id="BE6" onclick="loadVoice(6)">BE</button>
+        </div>
+    </div>
+</div>
+</div>
+
+<div class="lablec">
+        <hr>
+        <button id="eloreButton" onclick="elore()" style="margin-right: 30px" class="button_lepteto">Előre</button>
+        <button onclick="readOnce()" style="margin-right: 30px; box-shadow: 0px 0px 10px blue" id="readButton" class="button">Felolvas</button>
+        <button id="hatraButton" onclick="hatra()" class="button_lepteto">Hátra</button>
+        <br><hr>
+        <button onclick="toggleManualMode()" style="margin-right: 30px" id="modeButton" class="button">Ismétlés KI</button>
+        <button onclick="stopSpeaking()" style="color: white; background-color: red; margin-right: 0px; font-size: 18px" id="stopButton">- Stop -</button>
+        <button onclick="toggleStepMode()" style="margin-left: 30px" id="stepModeButton" class="button">Léptetés KI</button>
+        <br>
+        <!-- v7.4: Képernyő ébren tartásának állapota -->
+        <label id="ebrenLabel" style="font-size: 14px;"></label>
+        <hr>
+        <div id="NyelviJelolok" style="display: block; margin: 0 auto; text-align: center;">
+          <!-- Kiválasztható nyelvi jelölők -->
+          <input type="radio" id="option1" name="options" value="option1" checked onchange="elrendezesValtasa()">
+          <label for="option1">-MezoB-</label>
+          <input type="radio" id="option2" name="options" value="option2" onchange="elrendezesValtasa()">
+          <label for="option2">+MezoB+</label>
+          <br>
+        </div>
+        <div id="NyelviJelolokC" style="display: block; margin: 0 auto; text-align: center;">
+            <br>
+            <input type="radio" id="option3" name="optionsC" value="option3" checked onchange="toggleCsoportC_Radio()">
+            <label for="option3">-MezoC-</label>
+
+            <input type="radio" id="option4" name="optionsC" value="option4" onchange="toggleCsoportC_Radio()">
+            <label for="option4">+MezoC+</label>
+            <br>
+        </div>
+        <br>
+        <label id="idleTimeLabel" style="font-size: 18px;"></label>
+        <br>
+    <label style="font-size: 18px;">Kézírásos gyakorlófelület</label>
+    <button onclick="toggleCanvas()">Kézírás</button>
+    <button onclick="toggleTyping()">Gépelés</button>
+    <br><br>
+    <div id="canvasContainer" style="display: none;">
+        <canvas id="drawArea" height="300"
+                style="border:1px solid rgb(70, 70, 70); touch-action: none; width:100%;"></canvas>
+        <br>
+        <button onclick="clearCanvas()">Törlés</button>
+    </div>
+    <!-- GÉPELŐS GYAKORLÓFELÜLET -->
+    <div id="typingContainer" style="display:none; margin-top:10px;">
+        <textarea 
+            id="typingArea" 
+            placeholder="Ide gépelhetsz gyakorlásként..."
+            style="
+                width:100%;
+                height:120px;
+                font-size:18px;
+                padding:10px;
+                box-sizing:border-box;
+            ">
+        </textarea>
+        <button onclick="clearTyping()">Szöveg törlése</button>
+    </div>
+    
+  <div id="Beallitas" style= "background-color: rgb(23, 54, 93); color: white;">
+    <div>
+      <hr><hr>
+      <label style="font-size: 18px;">TOVÁBBI BEÁLLÍTÁSOK</label><hr><hr>
+      <label style="font-size: 18px">Elrendezés:</label>
+      <input type="radio" id="allo" name="allolap" value="allo" checked="" onchange="elrendezesValtasa(); saveSettings()">
+      <label for="allo" style="font-size: 18px;">Álló</label>
+      <input type="radio" id="fekvo" name="allolap" value="fekvo" onchange="elrendezesValtasa(); saveSettings()">
+      <label for="fekvo" style="font-size: 18px;">Fekvő</label>
+      <label id="screenSize" style="margin-left: 15px; font-size: 18px;"></label>
+      <hr>
+      <label for="MezoSZ" style="font-size: 18px; margin-left: 20px;">Olvasó keret mérete (X*Y):</label>
+      <input type="number" id="MezoSZ" style="font-size: 16px; width: 35px;" value="34" min="20" max="60" step="1" oninput="updateSize()">
+      <label for="MezoM" style="font-size: 16px; margin-left: 5px; margin-right: 5px;">*</label>
+      <input type="number" id="MezoM" style="font-size: 16px; width: 35px;" value="8" min="5" max="30" step="1"oninput="updateSize()">
+      <hr>
+      <label for="szunethossza" style="font-size: 18px; margin-left: 15px;">Felolvasási szünet hossza [sec]:</label>
+      <input type="number" id="szunethossza" style="font-size: 18px; width: 50px;" value="0.3" min="0.1" step="0.1" oninput="saveSettings()">
+      <hr>
+      <!-- v7.4: Képernyő ébren tartása Ismétlés / Léptetés közben -->
+      <label for="ebrenCheckbox" style="font-size: 18px;">Képernyő ébren tartása felolvasás közben:</label>
+      <input type="checkbox" id="ebrenCheckbox" class="checkbox" checked onchange="ebrenBeallitasValtozott(); saveSettings()">
+      <hr>
+    </div>
+        <div style="line-height: 35px;">
+        <input type="date" id="date1" style="font-size: 18px; width: 175px;">
+        <input type="date" id="date2" style="font-size: 18px; width: 175px;"><br>
+        <button onclick="filterByDate()" class="button" style="color: white; background-color: orangered; margin-left: 12px;">- - - - - - - - Szűrés dátum szerint - - - - - - - - </button><hr>
+        <label style="font-size: 18px; width: 100px;">Szöveg szűrése: </label>
+        <button onclick="refreshPage()" class="button" style="color: white; background-color: orangered;">Összes szűrés törlése</button><br>
+        <label style="font-size: 18px; width: 100px;">Szöveg: </label>
+        <input type="text" id="searchInput" style="font-size: 18px; width: 120px;" placeholder="Keresés..." onkeyup="filterBySearch()">
+        <br>
+        <label for="temaSelect" style="font-size: 18px; margin-left: 10px;">Téma:</label>
+        <select id="temaSelect" multiple style="font-size: 18px; width: 100px;" onchange="filterByTema()"></select>
+        <div>
+            <input type="checkbox" id="toggleCheckbox" checked onchange="updateLabel()">
+            <label for="toggleCheckbox" id="checkboxLabel">Téma szűrése: csak a kijelölteket mutasd</label>
+        </div>
+        <hr>
+    </div>
+        <!-- Sor ugrás ide -->
+        <label style="font-size: 18px">Sor:</label>
+        <input type="number" id="jumpInput" style="font-size: 18px; width: 60px;" value="1">
+        <button onclick="jumpToRow()" class="button" style="color: white; background-color: orangered" style="font-size: 18px;">Ugrás</button>
+        <label for="stepSizeSelect" style="font-size: 18px; margin-left: 0px;">Sor léptetés:</label>
+        <select style="font-size: 18px" id="stepSizeSelect">
+            <option value="1">1</option>
+            <option value="10">10</option>
+            <option value="50">50</option>
+            <option value="100">100</option>
+        </select><hr>
+        <label style="font-size: 18px; margin-left: 10px;">Elakadó felolvasás kezelése:</label>
+        <input type="checkbox" id="Tordeles" class="checkbox" style= "margin-left: 10px;" onchange="updateTordelesUI(); saveSettings()"><br>
+        <div style="line-height: 25px;">
+        <label style="font-size: 12px; margin-left: 0px;">(Okozhatja: 200 karakter feletti szöveg, lassú tempó, nyelv)</label><br>
+        <label for="karakter" id="labelKarakter" style="font-size: 18px;">Tördelés </label>
+        <input type="number" id="karakter" value="200" max="200" style="font-size: 18px; width: 50px; margin-left: 10px;" oninput="saveSettings()">
+        <label id="karakterLabel" style="font-size: 18px; margin-left: 10px;">karakterenként</label>
+        <hr>
+        </div>
+        <button onclick="resetSettings()" class="button" style="color: white; background-color: orangered">Összes beállítás alaphelyzetbe állítása</button><hr>
+        <div style="display: none;">
+        <label style="font-size: 18px;">Képernyő elalvás blokkolása:</label><br>
+        <label id="oprendszer" style="font-size: 12px; margin-left: 5px;">OS</label>
+        <label id="bongeszo" style="font-size: 12px; margin-left: 5px;">BR</label>
+        <label id="WakeLock" style="font-size: 12px; margin-left: 5px;">WakeLock ?</label><br>
+        <label id="mousePosition" style="font-size: 12px; margin-left: 5px;">Egér pozíció: (X: ?, Y: ?)</label><br>
+        <label id="randomMousePosition" style="font-size: 12px; margin-left: 5px;">Random egér pozíció: (X: ?, Y: ?)</label><br>
+        <!-- Felhasználó által megadható intervallum mező -->
+        <label for="intervalInput" style="font-size: 18px;">Mozgatás:</label>
+        <input type="number" id="intervalInput" value="100" min="1" style="width: 50px; font-size: 18px;">
+        <button id="toggleButton" class="button" style="color: white; background-color: orangered">WakeLock BE</button><br>
+        <!-- Logoló mező hibakereséshez -->
+        <button id="toggleLoggingButton" class="button" style="color: white; background-color: orangered;">Logolás leállítása</button><br>
+        </div>
+        <div style="display: flex; justify-content: center; align-items: center; flex-direction: column;">
+            <textarea id="logContainer" style="display: none; font-size: 12px; width: 350px; background-color: rgb(23, 54, 93); color: white;"></textarea>
+        </div>
+    </div>
+    <hr>
+    <div id="csvTableContainer" style="display:none; margin:20px;">
+    <h3 style="text-align:center;">Betöltött fájl tartalma</h3>
+
+    <table border="1" width="100%" style="font-size:12px; border-collapse:collapse;">
+        <thead id="csvTableHead"></thead>
+        <tbody id="csvTableBody"></tbody>
+    </table>
+
+    <div style="text-align:center; margin-top:10px;">
+        <button onclick="loadNext100()" class="button">+100 sor betöltése</button>
+        <span id="csvRowInfo" style="margin-left:15px;"></span>
+    </div>
+    </div>
+</div>
+
+<script>
+// =====================================================================
+//  FELOLVASÓ v7.3 – VÁLTOZÁSOK a v7.2-höz képest
+// ---------------------------------------------------------------------
+//  1. BE gomb / billentyűparancs böngésző-hang módban: újra felolvas
+//     (a loadVoice a nem létező speakPanel()-t hívta → hiba volt).
+//  2. Első indításkor / alaphelyzetbe állítás után a szövegmezők nem
+//     lesznek 1x1 méretűek (alapérték: 34 x 8, tördelés: 200).
+//  3. initMezoVisibility: nem halmoz fel eseménykezelőket sorváltáskor.
+//  4. A duplán definiált updateVoices-ból csak egy maradt (az, amelyik
+//     a mentett hangot is visszaállítja).
+//  5. "Elakadó felolvasás kezelése" (tördelés) újra működik, és a
+//     karakterszám-korlát is érvényesül. Az írásjel nélküli mondatvég
+//     nem vész el.
+//  6. CSV beolvasás: Windows-os sorvégek (\r), BOM, idézőjeles mezők
+//     (pontosvessző a szövegben) helyes kezelése. Egyetlen közös
+//     feldolgozó függvény (readCSVFromContent).
+//  7. Dátum: "2026.02.07." formátum minden böngészőben működik
+//     (parseDate), a dátumszűrés a záró napot is tartalmazza.
+//  8. Nagy fájl esetén a localStorage-mentés hibája nem állítja meg
+//     a betöltést (figyelmeztetést ad).
+//  9. Léptetés: az utolsó sornál megáll (nem ismétli végtelenül);
+//     Ismétlés + Léptetés egyszerre: a léptetés az erősebb, nem indul
+//     két felolvasás párhuzamosan.
+// 10. Takarítás: duplikált temaLabel id, duplikált addLog, nem használt
+//     függvények (FelolvasasXXX, showTextField, updateCharCount2..6)
+//     kivéve; a karakterszámlálás egy függvénnyel megy.
+// 11. WakeLock: a hatástalan "szimulált egérmozgatás" kivéve.
+// ---------------------------------------------------------------------
+//  v7.4
+// 12. KÉPERNYŐ ÉBREN TARTÁSA: Ismétlés vagy Léptetés közben a program
+//     automatikusan ébren tartja a képernyőt.
+//     1. módszer: Wake Lock (ha a böngésző engedi – https vagy Windows)
+//     2. tartalék: hangsáv NÉLKÜLI, némított mini videó
+//        (nincs hangja, ezért nem nyomja el a felolvasást)
+//     A gombsor alatt kiírja, melyik módszer működik, vagy miért nem.
+//     Ki/be kapcsolható a TOVÁBBI BEÁLLÍTÁSOK között.
+// =====================================================================
+
+// ===== PANEL DEFINÍCIÓK =====
+const panels = [
+{
+  id: 1,
+  textId: "foreignField",
+  langId: "languageSelect",
+  speedId: "speedInput",
+  autoId: "optionAuto1",
+  bongId: "optionBongeszo1",
+  voiceId: "voiceSelect1",
+  beId: "BE1",
+  divBongId: "div_Bongeszo1",
+  boxId: "csoport1",
+  charLabelId: "charCountLabel"   // v7.3: karakterszám címke
+},
+{
+  id: 2,
+  textId: "hungarianField",
+  langId: "languageSelectHungarian",
+  speedId: "speedInput2",
+  autoId: "optionAuto2",
+  bongId: "optionBongeszo2",
+  voiceId: "voiceSelect2",
+  beId: "BE2",
+  divBongId: "div_Bongeszo2",
+  boxId: "csoport2",
+  charLabelId: "charCountLabel2"   // v7.3: karakterszám címke
+},
+{
+  id: 3,
+  textId: "hungarianField2",
+  langId: "languageSelectHungarian2",
+  speedId: "speedInput3",
+  autoId: "optionAuto3",
+  bongId: "optionBongeszo3",
+  voiceId: "voiceSelect3",
+  beId: "BE3",
+  divBongId: "div_Bongeszo3",
+  boxId: "csoport3",
+  charLabelId: "charCountLabel3"   // v7.3: karakterszám címke
+},
+{
+  id: 4,
+  textId: "hungarianField4",
+  langId: "languageSelectHungarian4",
+  speedId: "speedInput4",
+  autoId: "optionAuto4",
+  bongId: "optionBongeszo4",
+  voiceId: "voiceSelect4",
+  beId: "BE4",
+  divBongId: "div_Bongeszo4",
+  boxId: "csoport4",
+  charLabelId: "charCountLabel4"   // v7.3: karakterszám címke
+},
+{
+  id: 5,
+  textId: "hungarianField5",
+  langId: "languageSelectHungarian5",
+  speedId: "speedInput5",
+  autoId: "optionAuto5",
+  bongId: "optionBongeszo5",
+  voiceId: "voiceSelect5",
+  beId: "BE5",
+  divBongId: "div_Bongeszo5",
+  boxId: "csoport5",
+  charLabelId: "charCountLabel5"   // v7.3: karakterszám címke
+},
+{
+  id: 6,
+  textId: "hungarianField6",
+  langId: "languageSelectHungarian6",
+  speedId: "speedInput6",
+  autoId: "optionAuto6",
+  bongId: "optionBongeszo6",
+  voiceId: "voiceSelect6",
+  beId: "BE6",
+  divBongId: "div_Bongeszo6",
+  boxId: "csoport6",
+  charLabelId: "charCountLabel6"   // v7.3: karakterszám címke
+}
+];
+
+function speakSinglePanel(id) {
+    // biztos, hogy olvashasson
+    isSpeakingCancelled = false;
+    autoMode = false;
+    // ha biztosan nem akarsz léptetést innen:
+    // stepMode = false;
+
+    clearAllHighlights();
+    speakPanelCallback(id, function(){});
+}
+
+function changeVoiceSelect(panelIndex) {
+    const p = panels[panelIndex - 1];
+
+    const voiceSelect = document.getElementById(p.voiceId);
+    const beButton = document.getElementById(p.beId);
+
+    const selectedVoiceIndex = voiceSelect.value;
+    beButton.textContent = selectedVoiceIndex;
+
+    saveSettings();
+}
+
+function toggleVoiceMode(panelIndex) {
+    const p = panels.find(x => x.id === panelIndex);
+    if (!p) return;
+
+    // Ha a panel rejtve van, akkor nincs mit frissíteni
+    /*
+    const panelDiv = document.getElementById(p.boxId);
+    if (!panelDiv || panelDiv.style.display === "none") {
+        return;
+    }
+    */
+
+    const auto = document.getElementById(p.autoId);
+    const bong = document.getElementById(p.bongId);
+    const voiceDiv = document.getElementById(p.divBongId);
+
+    // Ha bármelyik elem nem létezik, ne dobjon hibát
+    if (!auto || !bong || !voiceDiv) {
+        return;
+    }
+
+    if (bong.checked) {
+        voiceDiv.style.display = "block";
+    } else {
+        voiceDiv.style.display = "none";
+    }
+}
+
+function updateVoices(panelIndex) {
+    const p = panels[panelIndex - 1];
+
+    const voiceSelect = document.getElementById(p.voiceId);
+    const langSelect = document.getElementById(p.langId);
+    const selectedLang = langSelect.value;
+
+    const voices = window.speechSynthesis.getVoices();
+
+    // Hanglista törlése
+    voiceSelect.innerHTML = "";
+
+    // Csak a megfelelő nyelvű hangok
+    const filteredVoices = voices.filter(v => v.lang === selectedLang);
+
+    filteredVoices.forEach((voice, index) => {
+        const option = document.createElement("option");
+        option.value = index;
+        option.textContent = voice.name + " (" + voice.lang + ")";
+        voiceSelect.appendChild(option);
+    });
+
+    // BE gomb alapján visszaállítás
+    const beButton = document.getElementById(p.beId);
+    const savedIndex = parseInt(beButton.textContent);
+
+    if (!isNaN(savedIndex) && savedIndex < filteredVoices.length) {
+        voiceSelect.selectedIndex = savedIndex;
+    }
+}
+
+// v7.3: Segédfüggvény – a BE gombon tárolt hangindex visszaállítása a listában.
+// Régebben ezt a felolvasás a BE gomb "click()"-jével oldotta meg, ami a
+// loadVoice-on keresztül hibát dobott. Most közvetlenül ez a függvény végzi.
+function restoreVoiceSelection(panelIndex) {
+    const p = panels[panelIndex - 1];
+
+    const voiceSelect = document.getElementById(p.voiceId);
+    const beButton = document.getElementById(p.beId);
+
+    // A BE gomb a voiceSelect indexét tárolja
+    const savedIndex = parseInt(beButton.textContent);
+
+    if (!isNaN(savedIndex) && savedIndex < voiceSelect.options.length) {
+        voiceSelect.selectedIndex = savedIndex;
+    }
+}
+
+function loadVoice(panelIndex) {
+    // Mentett hang visszaállítása
+    restoreVoiceSelection(panelIndex);
+
+    // Ha nincs ismétlésblokkolás → felolvas
+    // v7.3 JAVÍTÁS: régen itt a nem létező speakPanel() volt → hiba, nem olvasott fel.
+    if (!IsmetlesBlokkolasa) {
+        speakSinglePanel(panelIndex);
+    }
+
+    saveSettings();
+}
+
+function readOnce() {
+    // biztos, hogy olvashasson
+    isSpeakingCancelled = false;
+    autoMode = false;      // ne ismétlés módban legyen
+    // stepMode maradhat, ha akarod, de ha biztosan nem akarsz léptetést:
+    // stepMode = false;
+
+    readCurrentRow();
+}
+
+function readCurrentRow() {
+    if (isSpeakingCancelled) return;
+
+    let visiblePanels = panels.filter(p => {
+        const group = document.getElementById("csoport" + p.id);
+        return group && group.style.display !== "none";
+    });
+
+    speakPanelsChain(visiblePanels, 0, function() {
+        // NINCS léptetés itt!
+        // A stepMode majd eldönti, hogy kell-e léptetni.
+    });
+}
+
+function speakPanelsChain(list, index, finishedCallback) {
+    if (index >= list.length) {
+
+        // Ha stepMode aktív → léptetés
+        if (stepMode && !isSpeakingCancelled) {
+
+            // v7.3: Az utolsó sornál a léptetés megáll
+            // (régen az utolsó sort végtelenül újra és újra felolvasta).
+            if (currentRowIndex >= filteredData.length - 1) {
+                toggleStepMode();   // kikapcsolja a léptetést
+                return;
+            }
+
+            nextRow();
+            updateFields();
+            readCurrentRow();
+
+            // v7.3: Léptetéskor NEM hívjuk meg a finishedCallback-et.
+            // Így ha az Ismétlés is be van kapcsolva, nem indul el
+            // két felolvasás egyszerre (a léptetés az erősebb).
+            return;
+        }
+
+        // Felolvas gomb / Ismétlés mód callback
+        if (finishedCallback) finishedCallback();
+        return;
+    }
+
+    speakPanelCallback(list[index].id, function () {
+        // Ha utolsó panel → nincs szünet
+        if (index >= list.length - 1) {
+            speakPanelsChain(list, index + 1, finishedCallback);
+            return;
+        }
+
+        // Szünet hossza (másodperc → ms)
+        let pause = parseFloat(document.getElementById("szunethossza").value) || 0;
+
+        setTimeout(function () {
+            speakPanelsChain(list, index + 1, finishedCallback);
+        }, pause * 1000);
+    });
+}
+
+function speakPanelCallback(panelId, done) {
+    if (isSpeakingCancelled) {
+        done();
+        return;
+    }
+
+    const p = panels[panelId - 1];
+
+    const textArea = document.getElementById(p.textId);
+    const langSelect = document.getElementById(p.langId);
+    const voiceSelect = document.getElementById(p.voiceId);
+    const speedInput = document.getElementById(p.speedId);
+    const bong = document.getElementById(p.bongId);
+
+    // Ha böngésző hang mód aktív → mentett hang visszaállítása
+    // v7.3: régen a BE gomb click()-jével, most közvetlenül.
+    if (bong.checked) {
+        restoreVoiceSelection(panelId);
+    }
+
+    const text = textArea.value.trim();
+    if (!text) {
+        done();
+        return;
+    }
+
+    // Beszéd paraméterei
+    const rate = parseFloat(speedInput.value) || 1;
+    const lang = langSelect.value;
+
+    // Hang kiválasztása (csak böngésző módban)
+    let voice = null;
+    if (bong.checked) {
+        const voices = speechSynthesis.getVoices();
+        const filtered = voices.filter(v => v.lang === lang);
+        const idx = parseInt(voiceSelect.value);
+        if (filtered[idx]) voice = filtered[idx];
+    }
+
+    // Kiemelés felolvasás közben
+    textArea.style.boxShadow = "0 0 10px yellow";
+
+    // v7.3: A felolvasást a speakTextInChunks végzi.
+    // Ha a "Tördelés" be van kapcsolva, darabokban olvas, különben egyben.
+    speakTextInChunks(text, lang, rate, voice, function () {
+        textArea.style.boxShadow = "";
+        done();
+    });
+}
+
+function toggleCsoportB() {
+    const b = document.getElementById("csoportB");
+    b.style.display = (b.style.display === "none") ? "block" : "none";
+}
+
+function toggleCsoportC_Radio() {
+    const c = document.getElementById("csoportC");
+    const option4 = document.getElementById("option4");
+
+    if (option4.checked) {
+        c.style.display = "block";
+
+        // A belső panelek megnyitása
+        document.getElementById("csoport5").style.display = "block";
+        document.getElementById("csoport6").style.display = "block";
+
+        toggleVoiceMode(5);
+        toggleVoiceMode(6);
+    } else {
+        c.style.display = "none";
+
+        // A belső panelek elrejtése
+        document.getElementById("csoport5").style.display = "none";
+        document.getElementById("csoport6").style.display = "none";
+    }
+}
+
+// ===== PANEL DEFINÍCIÓK =====
+
+var csvData = [];
+var filteredData = [];   // v7.3: eddig deklarálatlan volt
+var currentRowIndex = 0;
+var reader;
+var autoMode = false;
+var intervalId;
+var stepMode = false;
+/*
+var mezo1 = document.getElementById('foreignField');
+var mezo2 = document.getElementById('hungarianField');
+var mezo3 = document.getElementById('hungarianField2');
+var mezo4 = document.getElementById('hungarianField4');
+var box1 = document.getElementById('languageSelect');
+var box2 = document.getElementById('languageSelectHungarian');
+var box3 = document.getElementById('languageSelectHungarian2');
+var box4 = document.getElementById('languageSelectHungarian4');
+*/
+var stepModeButton = document.getElementById('stepModeButton');
+var IsmetlesBlokkolasa = false;
+var isSpeakingCancelled = false;
+var isReversed = true;
+let csvTableIndex = 0;
+const CSV_BATCH_SIZE = 100;
+let tableSourceData = [];
+const VISIBLE_COLUMNS = [
+    { index: 0,  label: "hu-HU" },
+    { index: 1,  label: "en-EN" },
+    { index: 2,  label: "de-DE" },
+    { index: 3,  label: "es-ES" },
+    { index: 4,  label: "fr-FR" },
+    { index: 5,  label: "it-IT" },
+    { index: 8,  label: "tr-TR" },
+    { index: 7,  label: "Téma" },
+    { index: 6,  label: "Dátum", type: "date" },
+    //{ index: 9, label: "ID" }
+];
+
+// oldal betöltése
+window.onload = function() {
+  elrendezesValtasa();
+  displayScreenSize();
+  detectOS();
+  loadSettings();
+  loadLastOpenedFile();
+  updateSize();
+  updateTordelesUI();   // v7.3: a mentett beállítás szerint mutatja/rejti
+  for (let i = 1; i <= 6; i++) {
+    toggleVoiceMode(i);
+  }
+};
+
+// Hangok listájának frissítése, ha az esemény bekövetkezik
+function initVoices() {
+    updateVoices(1);
+    updateVoices(2);
+    updateVoices(3);
+    updateVoices(4);
+    updateVoices(5);
+    updateVoices(6);
+}
+
+// 1) Azonnal meghívjuk
+initVoices();
+
+// 2) Ha a böngésző később tölti be a hangokat
+speechSynthesis.onvoiceschanged = initVoices;
+
+// Funkció az oldal frissítésére
+function refreshPage() {
+    location.reload();  // Ez újratölti az oldalt
+}
+
+function saveSettings() {
+    // Panelenkénti beállítások mentése
+    for (let p of panels) {
+
+        // BE gomb értéke
+        const beButton = document.getElementById(p.beId);
+        localStorage.setItem(`BE_${p.id}`, beButton.textContent);
+
+        // Nyelv
+        const langSelect = document.getElementById(p.langId);
+        localStorage.setItem(`LANG_${p.id}`, langSelect.value);
+
+        // Sebesség
+        const speedInput = document.getElementById(p.speedId);
+        localStorage.setItem(`SPEED_${p.id}`, speedInput.value);
+
+        // Telepített / Böngésző mód
+        const auto = document.getElementById(p.autoId);
+        const bong = document.getElementById(p.bongId);
+        localStorage.setItem(`MODE_${p.id}`, auto.checked ? "auto" : "bong");
+    }
+
+    // Globális beállítások
+    localStorage.setItem("darkMode", document.body.classList.contains("dark-mode"));
+    localStorage.setItem("blueMode", document.body.classList.contains("blue-mode"));
+
+    // Mezőméretek
+    localStorage.setItem("MezoSZ", document.getElementById("MezoSZ").value);
+    localStorage.setItem("MezoM", document.getElementById("MezoM").value);
+
+    // Orientáció
+    const selectedValue = document.querySelector('input[name="allolap"]:checked').value;
+    localStorage.setItem("selectedOrientation", selectedValue);
+
+    // Tördelés
+    localStorage.setItem("KarakterValue", document.getElementById("karakter").value);
+    localStorage.setItem("KarakterONOFF", document.getElementById("Tordeles").checked);
+
+    // Panelek közötti szünetek hossza
+    localStorage.setItem("szunethossza", document.getElementById("szunethossza").value);
+
+    // v7.4: Képernyő ébren tartása
+    localStorage.setItem("EbrenTartas", document.getElementById("ebrenCheckbox").checked);
+}
+
+function loadSettings() {
+    for (let p of panels) {
+
+        // Nyelv visszatöltése
+        const savedLang = localStorage.getItem(`LANG_${p.id}`);
+        if (savedLang !== null) {
+            document.getElementById(p.langId).value = savedLang;
+        }
+
+        // Sebesség visszatöltése
+        const savedSpeed = localStorage.getItem(`SPEED_${p.id}`);
+        if (savedSpeed !== null) {
+            document.getElementById(p.speedId).value = savedSpeed;
+        }
+
+        // Telepített / Böngésző mód visszatöltése
+        const savedMode = localStorage.getItem(`MODE_${p.id}`);
+        if (savedMode === "auto") {
+            document.getElementById(p.autoId).checked = true;
+            document.getElementById(p.bongId).checked = false;
+        } else if (savedMode === "bong") {
+            document.getElementById(p.autoId).checked = false;
+            document.getElementById(p.bongId).checked = true;
+        }
+
+        // BE gomb visszatöltése
+        const savedBE = localStorage.getItem(`BE_${p.id}`);
+        if (savedBE !== null) {
+            document.getElementById(p.beId).textContent = savedBE;
+        }
+    }
+
+    // Globális beállítások visszatöltése
+    document.body.classList.toggle("dark-mode", localStorage.getItem("darkMode") === "true");
+    document.body.classList.toggle("blue-mode", localStorage.getItem("blueMode") === "true");
+
+    // v7.3: alapérték 34 x 8 (régen 1 x 1 → apró mezők első indításkor)
+    document.getElementById("MezoSZ").value = localStorage.getItem("MezoSZ") || 34;
+    document.getElementById("MezoM").value = localStorage.getItem("MezoM") || 8;
+
+    const savedOrientation = localStorage.getItem("selectedOrientation");
+    if (savedOrientation) {
+        document.querySelector(`input[name="allolap"][value="${savedOrientation}"]`).checked = true;
+    }
+
+    // v7.3: alapérték 200 (régen 0)
+    document.getElementById("karakter").value = localStorage.getItem("KarakterValue") || 200;
+    document.getElementById("Tordeles").checked = (localStorage.getItem("KarakterONOFF") === "true");
+
+    // v7.4: Képernyő ébren tartása (alapból bekapcsolva)
+    const ebren = localStorage.getItem("EbrenTartas");
+    if (ebren !== null) {
+        document.getElementById("ebrenCheckbox").checked = (ebren === "true");
+    }
+
+    // Panelek közötti szünetek hossza
+    const szunet = localStorage.getItem("szunethossza");
+    if (szunet !== null) {
+        document.getElementById("szunethossza").value = szunet;
+    }
+
+}
+
+function resetSettings() {
+
+    // Panelenkénti beállítások törlése
+    for (let p of panels) {
+        localStorage.removeItem(`BE_${p.id}`);
+        localStorage.removeItem(`LANG_${p.id}`);
+        localStorage.removeItem(`SPEED_${p.id}`);
+        localStorage.removeItem(`MODE_${p.id}`);
+    }
+
+    // Globális beállítások törlése
+    localStorage.removeItem("darkMode");
+    localStorage.removeItem("blueMode");
+    localStorage.removeItem("MezoSZ");
+    localStorage.removeItem("MezoM");
+    localStorage.removeItem("selectedOrientation");
+    localStorage.removeItem("KarakterValue");
+    localStorage.removeItem("KarakterONOFF");
+    localStorage.removeItem("szunethossza");
+    localStorage.removeItem("EbrenTartas");   // v7.4
+
+    // Fájl adatok törlése
+    localStorage.removeItem("lastOpenedFileName");
+    localStorage.removeItem("lastOpenedFileContent");
+
+    window.location.reload();
+}
+
+function saveLastOpenedFile(fileName, fileContent) {
+    // v7.3: A localStorage mérete korlátos (kb. 5 MB).
+    // Ha a fájl túl nagy, a mentés hibát dob – ezt elkapjuk, hogy a betöltés
+    // ettől még rendben lefusson. Ilyenkor csak a "legutóbbi fájl" emlékezés marad el.
+    try {
+        localStorage.setItem("lastOpenedFileName", fileName);
+        localStorage.setItem("lastOpenedFileContent", fileContent); // Fájl tartalom mentése
+    } catch (err) {
+        localStorage.removeItem("lastOpenedFileName");
+        localStorage.removeItem("lastOpenedFileContent");
+        alert("A fájl túl nagy ahhoz, hogy a böngésző megjegyezze.\n" +
+              "Most használható, de legközelebb újra be kell tölteni.");
+    }
+}
+
+function loadLastOpenedFile() {
+    const lastOpenedFileName = localStorage.getItem("lastOpenedFileName");
+    const lastOpenedFileContent = localStorage.getItem("lastOpenedFileContent");
+
+    if (lastOpenedFileName && lastOpenedFileContent) {
+        document.getElementById('fileNameDisplay').value = lastOpenedFileName;
+        readCSVFromContent(lastOpenedFileContent);
+    }
+}
+
+//
+//
+//
+// Logolás vezérlése
+let isLoggingActive = false; // Alapértelmezett állapot: logolás kikapcsolva
+
+function toggleLogging() {
+    isLoggingActive = !isLoggingActive;
+    const logContainer = document.getElementById('logContainer');
+    if (isLoggingActive) {
+        logContainer.style.display = 'block'; // Logoló ablak megjelenítése
+    } else {
+        logContainer.style.display = 'none'; // Logoló ablak elrejtése
+    }
+    document.getElementById('toggleLoggingButton').textContent = isLoggingActive ? 'Logolás leállítása' : 'Logolás bekapcsolása';
+}
+
+function addLog(message) {
+    if (isLoggingActive) {
+        const logContainer = document.getElementById('logContainer');
+        logContainer.value += message + '\n'; // Új sorba írjuk a logot
+        logContainer.scrollTop = logContainer.scrollHeight; // Automatikus görgetés a legutóbbi loghoz
+    }
+}
+
+// Kapcsoló gomb eseménykezelése (Logolás ki/be kapcsolása)
+document.getElementById('toggleLoggingButton').addEventListener('click', toggleLogging);
+
+// Inaktivitás figyelése
+let idleTime = 0;
+const idleInterval = setInterval(() => {
+    idleTime++;
+    document.getElementById('idleTimeLabel').textContent = `${idleTime}`;
+}, 1000);
+
+// Az egér mozgásának figyelése
+window.addEventListener('mousemove', () => {
+    idleTime = 0; // Visszaállítja a számlálót
+});
+
+// Az érintés figyelése
+window.addEventListener('touchstart', () => {
+    idleTime = 0; // Visszaállítja a számlálót
+});
+
+// Kijelző ébren tartása
+let wakeLock = null;
+let mouseInterval = null;
+let wakeLockActive = false;
+
+// Wake Lock kérése
+// v7.3: A szimulált egérmozgatást kivettük. Az nem akadályozza meg a képernyő
+// elalvását – erre csak a böngésző valódi Wake Lock funkciója képes.
+async function requestWakeLock() {
+    if (!('wakeLock' in navigator)) {
+        document.getElementById('WakeLock').textContent = `WakeLock nem támogatott`;
+        addLog('Ez a böngésző nem támogatja a Wake Lock-ot.');
+        return;
+    }
+
+    try {
+        wakeLock = await navigator.wakeLock.request('screen');
+        document.getElementById('WakeLock').textContent = `WakeLock ON`;
+        addLog('Kijelző ébren tartva.');
+    } catch (err) {
+        // Hibakezelés: Ha a Wake Lock kérés sikertelen
+        console.error(`Wake Lock kérés sikertelen: ${err}`);
+        document.getElementById('WakeLock').textContent = `WakeLock OFF`;
+        addLog(`Wake Lock kérés sikertelen: ${err}`);
+    }
+}
+
+// Wake Lock feloldása
+async function releaseWakeLock() {
+    if (wakeLock !== null) {
+        await wakeLock.release();
+        wakeLock = null;
+        document.getElementById('WakeLock').textContent = `WakeLock OFF`;
+        addLog('Kijelző már nincs ébren tartva.');
+
+        if (mouseInterval) {
+            clearInterval(mouseInterval);
+            mouseInterval = null;
+        }
+    }
+}
+
+// Kapcsoló gomb eseménykezelése
+document.getElementById('toggleButton').addEventListener('click', async () => {
+    if (wakeLockActive) {
+        await releaseWakeLock();
+        document.getElementById('toggleButton').textContent = 'WakeLock BE';
+    } else {
+        await requestWakeLock();
+        document.getElementById('toggleButton').textContent = 'WakeLock KI';
+    }
+    wakeLockActive = !wakeLockActive;
+});
+
+// Wake Lock visszaállítása, ha elveszik
+document.addEventListener('visibilitychange', async () => {
+    if (wakeLockActive && wakeLock !== null && document.visibilityState === 'visible') {
+        if ('wakeLock' in navigator) {
+            await requestWakeLock();
+        }
+    }
+});
+
+// Ellenőrzi, hogy a böngésző támogatja-e a Wake Lock API-t
+if ('wakeLock' in navigator) {
+    document.getElementById('WakeLock').textContent = `WakeLock támogatott`;
+} else {
+    document.getElementById('WakeLock').textContent = `WakeLock nem támogatott`;
+}
+
+// Egér mozgásának figyelése és koordináták megjelenítése
+window.addEventListener('mousemove', (event) => {
+    const mouseX = event.clientX;
+    const mouseY = event.clientY;
+    document.getElementById('mousePosition').textContent = `Egér pozíció: (X: ${mouseX}, Y: ${mouseY})`;
+});
+//
+//
+//
+
+
+// ===== CSV FELDOLGOZÁS (v7.3) =====
+
+// Egy CSV sor felbontása pontosvessző mentén.
+// - Idézőjelek közötti pontosvesszőt NEM tekint elválasztónak
+//   (az Excel így menti, ha a szövegben pontosvessző van).
+// - A dupla idézőjel ("") a szövegen belül egy idézőjelet jelent.
+function parseCsvLine(line) {
+    const cells = [];
+    let cell = "";
+    let inQuotes = false;
+
+    for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+
+        if (inQuotes) {
+            // Idézőjeles mezőn belül vagyunk
+            if (ch === '"') {
+                if (line[i + 1] === '"') {
+                    cell += '"';      // "" → egy idézőjel
+                    i++;
+                } else {
+                    inQuotes = false; // idézőjeles rész vége
+                }
+            } else {
+                cell += ch;
+            }
+        } else {
+            // Normál mező
+            if (ch === '"' && cell === "") {
+                inQuotes = true;      // idézőjeles mező kezdete
+            } else if (ch === ';') {
+                cells.push(cell);     // mező vége
+                cell = "";
+            } else {
+                cell += ch;
+            }
+        }
+    }
+    cells.push(cell); // utolsó mező
+    return cells;
+}
+
+// A teljes fájl feldolgozása sorokra és oszlopokra.
+// - BOM (láthatatlan jel a fájl elején) eltávolítása
+// - Windows (\r\n) és Unix (\n) sorvégek egyformán kezelve
+// - Üres sorok kihagyása
+function parseCSV(contents) {
+    if (contents.charCodeAt(0) === 0xFEFF) {
+        contents = contents.slice(1);
+    }
+
+    return contents
+        .split(/\r?\n/)
+        .filter(line => line.trim() !== "")
+        .map(line => parseCsvLine(line));
+}
+
+// Dátum értelmezése többféle formátumból.
+// Elfogadja: "2026.02.07.", "2026.02.07. 12:30", "2026-02-07", "2026/02/07"
+// Visszaad: Date objektumot (helyi idő, éjfél), vagy null-t, ha nem értelmezhető.
+// (A new Date("2026.02.07.") Firefoxban és Safariban hibás eredményt ad.)
+function parseDate(value) {
+    if (!value) return null;
+
+    const m = String(value).match(/(\d{4})\D+(\d{1,2})\D+(\d{1,2})/);
+    if (m) {
+        return new Date(parseInt(m[1]), parseInt(m[2]) - 1, parseInt(m[3]));
+    }
+
+    const d = new Date(value);
+    return isNaN(d) ? null : d;
+}
+
+// A fájl tartalmának betöltése.
+// Ezt használja a FÁJLKEZELŐ (readCSV) és az oldal indulásakor
+// a legutóbb megnyitott fájl visszatöltése is.
+// Visszaad: true, ha sikerült; false, ha a fájl hibás.
+function readCSVFromContent(contents) {
+    const data = parseCSV(contents);
+
+    // Oszlopszám ellenőrzés
+    // (hu, en, de, es, fr, it, dátum, téma, tr = 9 oszlop)
+    if (!data[0] || data[0].length < 9) {
+        alert("Figyelem: A CSV fájl nem tartalmazza mind a 9 oszlopot!");
+        return false;
+    }
+
+    csvData = data;
+    filteredData = csvData;
+    currentRowIndex = 0;
+    updateFields();
+
+    // Különböző értékek kigyűjtése a téma oszlopból (7. index)
+    var uniqueValues = [...new Set(csvData.map(row => row[7] || "N/A"))];
+    var temaSelect = document.getElementById('temaSelect');
+    temaSelect.innerHTML = ''; // Legördülő menü ürítése
+
+    uniqueValues.forEach(function(value) {
+        var option = document.createElement('option');
+        option.value = value;
+        option.textContent = value;
+        temaSelect.appendChild(option);
+    });
+
+    // Táblázat (v7.3: egyetlen hívás, a szűrt adatokkal)
+    refreshCsvTable(filteredData);
+
+    // Téma frissítés
+    setTimeout(() => {
+        temaSelect.dispatchEvent(new Event('change'));
+    }, 300);
+
+    return true;
+}
+
+function filterByTema() {
+    const temaSelect = document.getElementById('temaSelect');
+    const selectedOptions = Array.from(temaSelect.selectedOptions).map(option => option.value);
+    const checkbox = document.getElementById('toggleCheckbox');
+
+    if (selectedOptions.length > 0) {
+        filteredData = csvData.filter(row => {
+            const isMatch = selectedOptions.includes(row[7]);
+            return checkbox.checked ? isMatch : !isMatch;
+        });
+    } else {
+        filteredData = csvData; // No filtering if no options are selected
+    }
+
+    currentRowIndex = 0; // Reset index to the first row
+    updateFields();
+    refreshCsvTable(filteredData);
+}
+
+function updateSize() {
+  var width = document.getElementById('MezoSZ').value;
+  var height = document.getElementById('MezoM').value;
+            
+  var textareas = document.querySelectorAll('textarea');
+  textareas.forEach(function(textarea) {
+    textarea.cols = width;
+    textarea.rows = height;
+  });
+  saveSettings();
+}
+
+// v7.3: Itt volt az updateVoices második példánya, ami felülírta az elsőt
+// (és vele a mentett hang visszaállítását). Kivettük – a fájl elején lévő marad.
+
+// v7.3: Egyetlen karakterszámláló az összes panelhez
+// (régen külön updateCharCount, updateCharCount2 ... updateCharCount6 volt).
+// A panelt a szövegmező azonosítója alapján keresi meg a panels tömbben.
+function updateCharCount(element) {
+    if (!element) return;
+
+    const p = panels.find(x => x.textId === element.id);
+    if (!p) return;
+
+    const label = document.getElementById(p.charLabelId);
+    if (label) {
+        label.textContent = "Betű: " + element.value.length;
+    }
+}
+
+// v7.3: Az összes panel karakterszámának frissítése egyszerre
+function updateAllCharCounts() {
+    for (let p of panels) {
+        updateCharCount(document.getElementById(p.textId));
+    }
+}
+
+function readCSV(file) {
+    if (!file) return;
+
+    var reader = new FileReader();
+
+    reader.onload = function(event) {
+        var contents = event.target.result;
+
+        // v7.3: a feldolgozást a közös readCSVFromContent végzi
+        if (!readCSVFromContent(contents)) {
+            return; // hibás fájl – nem mentjük el
+        }
+
+        // Fájl mentése
+        saveLastOpenedFile(file.name, contents);
+        document.getElementById('fileNameDisplay').value = file.name;
+
+        // v7.3: hogy ugyanazt a fájlt újra ki lehessen választani
+        document.getElementById('fileInput').value = "";
+    };
+
+    reader.readAsText(file);
+}
+
+function filterByDate() {
+    // v7.3: parseDate – minden böngészőben működik.
+    // Ha valamelyik dátum üres, arra az oldalra nincs korlát.
+    var startDate = parseDate(document.getElementById('date1').value);
+    var endDate = parseDate(document.getElementById('date2').value);
+
+    filteredData = csvData.filter(function(row) {
+        var rowDate = parseDate(row[6]);
+        if (!rowDate) return false;                         // dátum nélküli sor kimarad
+        if (startDate && rowDate < startDate) return false; // túl korai
+        if (endDate && rowDate > endDate) return false;     // túl késői
+        return true;
+    });
+
+    currentRowIndex = 0;
+    updateFields();
+    refreshCsvTable(filteredData);
+}
+
+function filterBySearch() {
+    var input = document.getElementById('searchInput');
+    var searchText = input.value.toLowerCase();  // A szöveget kisbetűsre alakítjuk az egyszerűbb összehasonlítás érdekében
+
+    if (searchText) {
+        filteredData = csvData.filter(row => {
+            return row.some(cell => cell.toLowerCase().includes(searchText)); 
+        });
+    } else {
+        filteredData = csvData;  // Ha nincs megadott szöveg, az összes adatot megjelenítjük
+    }
+    
+    currentRowIndex = 0;  // Visszaállítjuk az indexet az első sorra
+    updateFields();  // Frissítjük a megjelenített adatokat
+    refreshCsvTable(filteredData);
+}
+
+function updateFields() {
+    var currentRow = filteredData[currentRowIndex];
+
+    if (currentRow) {
+        // Panelek kitöltése
+        // v7.3: ciklussal a panels tömb alapján (régen 6 külön sor).
+        // Ha az adott oszlop hiányzik a sorból, üres marad (nem "undefined").
+        for (let p of panels) {
+            const lang = document.getElementById(p.langId).value;
+            const value = currentRow[Languages[lang]];
+            document.getElementById(p.textId).value = (value !== undefined) ? value : "";
+        }
+
+        // Dátum
+        // v7.3: parseDate – hibás dátumnál üres marad (nem "NaN.NaN.NaN")
+        var date = parseDate(currentRow[6]);
+        if (date) {
+            var year = date.getFullYear();
+            var month = String(date.getMonth() + 1).padStart(2, '0');
+            var day = String(date.getDate()).padStart(2, '0');
+            document.getElementById('datumLabel').textContent = year + '.' + month + '.' + day;
+        } else {
+            document.getElementById('datumLabel').textContent = "";
+        }
+
+        // Téma
+        document.getElementById('temaLabel').textContent = currentRow[7] || "";
+
+    } else {
+        // v7.3: Ha a szűrésnek nincs találata, a mezők kiürülnek
+        for (let p of panels) {
+            document.getElementById(p.textId).value = "";
+        }
+        document.getElementById('datumLabel').textContent = "";
+        document.getElementById('temaLabel').textContent = "";
+    }
+
+    updateRowCounter();
+    updateAllCharCounts();   // v7.3: egy hívás a 6 helyett
+    elrendezesValtasa();
+}
+
+function elore(){
+    stopSpeaking();
+    previousRow();
+}
+
+function previousRow() {
+    var stepSize = parseInt(document.getElementById('stepSizeSelect').value);
+    currentRowIndex -= stepSize;
+    if (currentRowIndex < 0) {
+        currentRowIndex = 0;
+    }
+    updateFields();
+}
+
+function hatra(){
+    stopSpeaking();
+    nextRow();
+}
+
+function nextRow() {
+    var stepSize = parseInt(document.getElementById('stepSizeSelect').value);
+    currentRowIndex += stepSize;
+    if (currentRowIndex >= filteredData.length) {
+        // v7.3: Math.max – üres lista esetén se legyen negatív az index
+        currentRowIndex = Math.max(0, filteredData.length - 1);
+    }
+    updateFields();
+}
+
+function jumpToRow() {
+    var jumpInput = document.getElementById('jumpInput');
+    var targetRow = parseInt(jumpInput.value) - 1;
+    if (targetRow >= 0 && targetRow < filteredData.length) {
+        currentRowIndex = targetRow;
+        updateFields();
+    } else {
+        alert("Érvénytelen sorszám!");
+    }
+}
+
+// Operációs rendszer felismerése
+function detectOS() {
+    const userAgent = window.navigator.userAgent;
+    let os = "Ismeretlen OS";
+
+    if (userAgent.indexOf("Windows NT") !== -1) {
+        os = "Windows";
+    } else if (userAgent.indexOf("Android") !== -1) {
+        os = "Android";
+    } else if (userAgent.indexOf("iPhone") !== -1 || userAgent.indexOf("iPad") !== -1) {
+        os = "iOS";
+    } else if (userAgent.indexOf("Mac OS X") !== -1) {
+        os = "MacOS";
+    } else if (userAgent.indexOf("Linux") !== -1) {
+        os = "Linux";
+    }
+
+    document.getElementById('oprendszer').textContent = os;
+    return os;   // v7.3: régen nem adott vissza értéket
+}
+
+var os = detectOS();
+//console.log("Az operációs rendszer: " + os);
+document.getElementById('oprendszer').textContent = os;
+
+// Böngésző felismerése
+function detectBrowser() {
+    var userAgent = navigator.userAgent;
+
+    if (userAgent.indexOf("Chrome") > -1 && userAgent.indexOf("Edg") === -1 && userAgent.indexOf("OPR") === -1) {
+        return "Chrome";
+    } else if (userAgent.indexOf("Safari") > -1 && userAgent.indexOf("Chrome") === -1) {
+        return "Safari";
+    } else if (userAgent.indexOf("Firefox") > -1) {
+        return "Firefox";
+    } else if (userAgent.indexOf("OPR") > -1 || userAgent.indexOf("Opera") > -1) {
+        return "Opera";
+    } else if (userAgent.indexOf("Edg") > -1) {
+        return "Edge";
+    } else if (userAgent.indexOf("MSIE") > -1 || !!document.documentMode) {
+        return "Internet Explorer";
+    }
+
+    return "Unknown";
+}
+
+var browser = detectBrowser();
+//console.log("A böngésző: " + browser);
+document.getElementById('bongeszo').textContent = browser;
+
+// v7.3: Szöveg darabolása felolvasáshoz.
+// 1. lépés: mondatokra bontás (. ! ? után).
+//    Az írásjel nélküli utolsó rész is megmarad (régen elveszett!).
+// 2. lépés: ha egy mondat hosszabb, mint maxLen karakter,
+//    szóhatárok (szóközök) mentén tovább bontja.
+function splitTextToChunks(text, maxLen) {
+    const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+    const chunks = [];
+
+    sentences.forEach(function(sentence) {
+        let s = sentence.trim();
+
+        // Túl hosszú mondat szétvágása
+        while (s.length > maxLen) {
+            let cut = s.lastIndexOf(" ", maxLen);  // utolsó szóköz a korláton belül
+            if (cut <= 0) cut = maxLen;            // ha nincs szóköz, kemény vágás
+            chunks.push(s.substring(0, cut).trim());
+            s = s.substring(cut).trim();
+        }
+
+        if (s) chunks.push(s);
+    });
+
+    return chunks;
+}
+
+// v7.3: A tördelés karakterszám-mezője csak akkor látszik,
+// ha az "Elakadó felolvasás kezelése" be van kapcsolva.
+function updateTordelesUI() {
+    const on = document.getElementById("Tordeles").checked;
+    const display = on ? "inline" : "none";
+    document.getElementById("labelKarakter").style.display = display;
+    document.getElementById("karakter").style.display = display;
+    document.getElementById("karakterLabel").style.display = display;
+}
+
+//Hosszú szöveg darabolása
+function speakTextInChunks(text, lang, rate, voice, onEndCallback) {
+    var checkboxTordeles = document.getElementById('Tordeles');     //ha engedélyezve van
+
+    if (checkboxTordeles.checked) {
+        // A szöveg mondatokra bontása
+        // v7.3: mondatokra ÉS karakterkorlát szerint bontás
+        let maxLen = parseInt(document.getElementById('karakter').value) || 200;
+        let sentences = splitTextToChunks(text, maxLen); // Regex a mondatok felismeréséhez
+
+        let currentIndex = 0;
+
+        function speakNextChunk() {
+            // Ellenőrizzük, hogy a beszédet leállították-e
+            if (isSpeakingCancelled) {
+                speechSynthesis.cancel(); // Megállítja a beszédet
+                if (onEndCallback) {
+                    onEndCallback();
+                }
+                return;
+            }
+
+            if (currentIndex < sentences.length) {
+                let chunk = sentences[currentIndex].trim(); // Az aktuális mondat
+
+                let utterance = new SpeechSynthesisUtterance(chunk);
+                utterance.lang = lang;
+                utterance.rate = rate;
+                utterance.voice = voice;
+
+                utterance.onend = function() {
+                    currentIndex++;
+                    speakNextChunk();
+                };
+
+                utterance.onerror = function(event) {
+                    console.error('Felolvasási hiba történt:', event.error);
+                    speechSynthesis.cancel(); // Biztosítjuk, hogy minden futó felolvasás megálljon
+                    if (onEndCallback) {
+                        onEndCallback();
+                    }
+                };
+
+                speechSynthesis.speak(utterance);
+            } else if (onEndCallback) {
+                onEndCallback();
+            }
+        }
+
+        speakNextChunk();
+    } else {
+        // Nem Windows esetén az egész szöveget egyszerre olvassa fel
+        let utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = rate;
+        utterance.voice = voice;
+
+        // Ellenőrizzük, hogy a beszédet leállították-e
+        if (isSpeakingCancelled) {
+            speechSynthesis.cancel(); // Megállítja a beszédet
+            if (onEndCallback) {
+                onEndCallback();
+            }
+            return;
+        }
+
+
+        utterance.onend = function() {
+            if (onEndCallback) {
+                onEndCallback();
+            }
+        };
+
+        utterance.onerror = function(event) {
+            console.error('Felolvasási hiba történt:', event.error);
+            speechSynthesis.cancel(); // Biztosítjuk, hogy minden futó felolvasás megálljon
+            if (onEndCallback) {
+                onEndCallback();
+            }
+        };
+
+        speechSynthesis.speak(utterance);
+    }
+}
+
+function elrendezesValtasa() {
+    var csoportA = document.getElementById("csoportA");
+    var csoportB = document.getElementById("csoportB");
+    var csoportC = document.getElementById("csoportC");
+    var allolap = document.querySelector('input[name="allolap"]:checked').value;
+    var vonalak = document.querySelectorAll("hr");
+
+    const showB = document.getElementById("option2").checked;
+    const jelolokC = document.getElementById("NyelviJelolokC");
+
+    if (showB) {
+        jelolokC.style.display = "block";
+    } else {
+        jelolokC.style.display = "none";
+
+        // <<< C mező visszaállítása -MezoC- állásba
+        document.getElementById("option3").checked = true;
+
+        if (typeof toggleCsoportC_Radio === "function") {
+            toggleCsoportC_Radio();
+        }
+    }
+
+    // --- innen megy tovább a te eredeti kódod ---
+    displayScreenSize();
+
+    if (allolap === "allo") {
+        initMezoVisibility();
+        csoportA.style.display = "block";
+        csoportA.style.textAlign = "center";
+        csoportB.style.display = "block";
+        csoportB.style.textAlign = "center";
+        csoportC.style.display = "block";
+        csoportC.style.textAlign = "center";
+        vonalak.forEach(v => v.style.width = "400px");
+    } else {
+        initMezoVisibility();
+        csoportA.style.display = "flex";
+        csoportA.style.justifyContent = "center";
+        csoportA.style.alignItems = "center";
+
+        csoportB.style.display = "flex";
+        csoportB.style.justifyContent = "center";
+        csoportB.style.alignItems = "center";
+        csoport1.style.marginRight = "5px";
+        csoport3.style.marginRight = "5px";
+
+        csoportC.style.display = "flex";
+        csoportC.style.justifyContent = "center";
+        csoportC.style.alignItems = "center";
+        csoport3.style.marginRight = "5px";
+        csoport5.style.marginRight = "5px";
+
+        vonalak.forEach(v => v.style.width = "750px");
+    }
+}
+
+// A B csoport (3. és 4. panel) láthatósága a -MezoB- / +MezoB+ jelölő alapján.
+// v7.3 JAVÍTÁS: Régen minden hívásnál ÚJ eseménykezelőt tett a rádiógombokra
+// (minden sorváltáskor!), így ezek felhalmozódtak. Most csak beállítja
+// a láthatóságot – a rádiógombok onchange-e úgyis meghívja az elrendezesValtasa-t.
+function initMezoVisibility() {
+  var hungarianField2 = document.getElementById('csoport3');
+  var hungarianField4 = document.getElementById('csoport4');
+  var showB = document.getElementById('option2').checked;
+
+  if (showB) {
+    hungarianField2.style.display = 'block';
+    hungarianField4.style.display = 'block';
+  } else {
+    hungarianField2.style.display = 'none';
+    hungarianField4.style.display = 'none';
+  }
+}
+
+function toggleDarkMode() {
+  var body = document.body;
+  body.classList.toggle("dark-mode");
+}
+
+function toggleBlueMode() {
+  var body = document.body;
+  body.classList.toggle("blue-mode");
+}
+
+function updateRowCounter() {
+    var rowCounter = document.getElementById('rowCounter');
+    // v7.3: üres lista esetén "0 / 0" (nem "1 / 0")
+    var current = filteredData.length > 0 ? currentRowIndex + 1 : 0;
+    rowCounter.textContent = current + " / " + filteredData.length;
+}
+
+function toggleManualMode() {
+  autoMode = !autoMode;
+  var modeButton = document.getElementById('modeButton');
+
+  if (autoMode) {
+    modeButton.textContent = "Ismétlés BE";
+    isSpeakingCancelled = false; 
+    modeButton.style.color = "blue";
+    modeButton.style.boxShadow = "0px 0px 10px yellow";
+    document.getElementById('readButton').disabled = true;
+
+    startManualLoop();   // <<< EZ A LÉNYEG, NEM readCurrentRow()
+    kepernyoEbrenTartasBE();   // v7.4
+  } else {
+    modeButton.textContent = "Ismétlés KI";
+    modeButton.style.color = "black";
+    modeButton.style.boxShadow = "0px 0px 0px yellow";
+    kepernyoEbrenTartasKI();   // v7.4
+    document.getElementById('readButton').disabled = false;
+
+    isSpeakingCancelled = true;
+    speechSynthesis.cancel();
+    clearAllHighlights();   // kiemelés törlése
+  }
+}
+
+function startManualLoop() {
+    if (!autoMode || isSpeakingCancelled) return;
+
+    let visiblePanels = panels.filter(p => {
+        const group = document.getElementById("csoport" + p.id);
+        return group && group.style.display !== "none";
+    });
+
+    speakPanelsChain(visiblePanels, 0, function () {
+        if (autoMode && !isSpeakingCancelled) {
+            startManualLoop();   // újra elölről
+        }
+    });
+}
+
+function toggleStepMode() {
+  stepMode = !stepMode;
+
+  var stepModeButton = document.getElementById('stepModeButton');
+
+  if (stepMode) {
+    stepModeButton.textContent = "Léptetés BE";
+    isSpeakingCancelled = false;
+    stepModeButton.style.color = "blue";
+    stepModeButton.style.boxShadow = "0px 0px 10px yellow";
+
+    startStepLoop();   // <-- EZ indítja a léptetést
+    kepernyoEbrenTartasBE();   // v7.4
+  } else {
+    stepModeButton.textContent = "Léptetés KI";
+    stepModeButton.style.color = "black";
+    stepModeButton.style.boxShadow = "0px 0px 0px yellow";
+    kepernyoEbrenTartasKI();   // v7.4
+
+    isSpeakingCancelled = true;
+    speechSynthesis.cancel();
+    clearAllHighlights();   // kiemelés törlése
+  }
+}
+
+function startStepLoop() {
+    if (!stepMode || isSpeakingCancelled) return;
+
+    // A sor felolvasása. A következő sorra lépést a speakPanelsChain
+    // végzi a sor végén (stepMode alapján).
+    // v7.3: a sehol nem használt speakPanelsChainEndCallback változót kivettük.
+    readCurrentRow();
+}
+
+function stopSpeaking() {
+    isSpeakingCancelled = true;
+    speechSynthesis.cancel();
+    clearAllHighlights();   // <<< EZ az új sor
+}
+
+function clearAllHighlights() {
+    for (let p of panels) {
+        const ta = document.getElementById(p.textId);
+        if (ta) ta.style.boxShadow = "";
+    }
+}
+
+function getScreenSize() {
+   var width = window.innerWidth ||
+   document.documentElement.clientWidth ||
+   document.body.clientWidth;
+
+   var height = window.innerHeight ||
+   document.documentElement.clientHeight ||
+   document.body.clientHeight;
+
+   return { width: width, height: height };
+}
+
+function displayScreenSize() {
+   var screenSize = getScreenSize();
+   document.getElementById("screenSize").innerText = screenSize.width + " x " + screenSize.height + " px";
+}
+
+function updateLabel() {
+    const checkbox = document.getElementById('toggleCheckbox');
+    const label = document.getElementById('checkboxLabel');
+    label.textContent = checkbox.checked ? "Téma szűrése: csak a kijelölteket mutasd" : "Téma szűrése: kijelölteket vedd ki";
+}
+
+// Figyeljük a billentyűlenyomást
+document.addEventListener("keydown", function(event) {
+    if (!["INPUT", "TEXTAREA"].includes(document.activeElement.tagName)) {
+        if (event.key === "h" || event.key === "H" || event.key === 'ArrowRight') {
+            document.getElementById("hatraButton").click();
+        }
+        if (event.key === "e" || event.key === "E" || event.key === 'ArrowLeft') {
+            document.getElementById("eloreButton").click();
+        }
+        if (event.key === "1" || event.key === "x" || event.key === "X") {
+            if (optionAuto1.checked) {
+                document.getElementById("Felolvas1").click();
+            } else if (optionBongeszo1.checked) {
+                document.getElementById("BE1").click();
+            }
+        }
+        if (event.key === "2" || event.key === "c" || event.key === "C") {
+            if (optionAuto2.checked) {
+                document.getElementById("Felolvas2").click();
+            } else if (optionBongeszo2.checked) {
+                document.getElementById("BE2").click();
+            }
+        }
+        if (event.key === "3" || event.key === "v" || event.key === "V") {
+            if (optionAuto3.checked) {
+                document.getElementById("Felolvas3").click();
+            } else if (optionBongeszo3.checked) {
+                document.getElementById("BE3").click();
+            }
+        }
+        if (event.key === "4" || event.key === "b" || event.key === "B") {
+            if (optionAuto4.checked) {
+                document.getElementById("Felolvas4").click();
+            } else if (optionBongeszo4.checked) {
+                document.getElementById("BE4").click();
+            }
+        }
+        if (event.key === "5" || event.key === "n" || event.key === "N") {
+            if (optionAuto5.checked) {
+                document.getElementById("Felolvas5").click();
+            } else if (optionBongeszo5.checked) {
+                document.getElementById("BE5").click();
+            }
+        }
+        if (event.key === "6" || event.key === "m" || event.key === "M") {
+            if (optionAuto6.checked) {
+                document.getElementById("Felolvas6").click();
+            } else if (optionBongeszo6.checked) {
+                document.getElementById("BE6").click();
+            }
+        }
+        if (event.key === "f" || event.key === "F") {
+            document.getElementById("readButton").click();
+        }
+        if (event.key === "i" || event.key === "I") {
+            document.getElementById("modeButton").click();
+        }
+        if (event.key === "s" || event.key === "S") {
+            document.getElementById("stopButton").click();
+        }
+        if (event.key === "l" || event.key === "L") {
+            document.getElementById("stepModeButton").click();
+        }
+    }
+});
+
+function toggleSortOrder() {
+    csvData.reverse();
+    filteredData = [...csvData]; // szűrt adathalmaz is frissül
+    currentRowIndex = 0;         // kezdje az elejéről
+    updateFields();              // frissítés a kijelzőn
+    refreshCsvTable(filteredData); // v7.3: a táblázat is kövesse a sorrendet
+
+    // Töröljük a téma kijelölést
+    let temaSelect = document.getElementById('temaSelect');
+    temaSelect.selectedIndex = -1; // Eltávolítja az összes kijelölést
+    
+    // Felirat frissítése
+    isReversed = !isReversed;
+    document.getElementById('sortButton').textContent = isReversed ? "Z-A" : "A-Z";
+}
+
+function createCsvTableHeader() {
+    const thead = document.getElementById("csvTableHead");
+    thead.innerHTML = "";
+
+    const tr = document.createElement("tr");
+    tr.innerHTML = 
+        `<th>#</th>` +
+        VISIBLE_COLUMNS.map(col => `<th>${col.label}</th>`).join("");
+
+    thead.appendChild(tr);
+}
+
+function loadNext100() {
+    const tbody = document.getElementById("csvTableBody");
+    const container = document.getElementById("csvTableContainer");
+    const info = document.getElementById("csvRowInfo");
+
+    container.style.display = "block";
+
+    const fragment = document.createDocumentFragment();
+    const end = Math.min(csvTableIndex + CSV_BATCH_SIZE, tableSourceData.length);
+
+    for (let i = csvTableIndex; i < end; i++) {
+        const row = tableSourceData[i];
+        const tr = document.createElement("tr");
+
+        let html = `<td>${i + 1}</td>`; // # oszlop
+
+        VISIBLE_COLUMNS.forEach(col => {
+            let value = row[col.index] ?? "";
+
+            if (col.type === "date" && value) {
+                // csak dátum, idő nélkül
+                value = value.replace(/\s+/g, "").substring(0, 10);
+                // pl. "2026.02.07."
+            }
+            html += `<td>${value.toString().replace(/</g, "&lt;")}</td>`;
+        });
+
+        tr.innerHTML = html;
+        fragment.appendChild(tr);
+    }
+
+    tbody.appendChild(fragment);
+    csvTableIndex = end;
+
+    info.textContent = `Megjelenítve: ${csvTableIndex} / ${tableSourceData.length}`;
+    if (csvTableIndex >= tableSourceData.length) {
+        info.textContent += " (vége)";
+    }
+
+    console.log(
+    "HEADER:", 1 + VISIBLE_COLUMNS.length,
+    "ROW:", document.querySelector("#csvTableBody tr")?.children.length
+    );
+}
+
+function refreshCsvTable(sourceData) {
+    tableSourceData = sourceData;
+    csvTableIndex = 0;
+
+    document.getElementById("csvTableBody").innerHTML = "";
+
+    if (!tableSourceData || tableSourceData.length === 0) {
+        document.getElementById("csvRowInfo").textContent = "Nincs találat";
+        return;
+    }
+
+    createCsvTableHeader(tableSourceData[0].length);
+    loadNext100();
+}
+
+// ===== KÉPERNYŐ ÉBREN TARTÁSA (v7.4) =====
+//
+// Miért kell? Telefonon, ha a képernyő elalszik, a böngésző felfüggeszti
+// az oldalt, és a felolvasás megáll. Ezért Ismétlés / Léptetés közben
+// ébren tartjuk a képernyőt.
+//
+// Két módszer, ebben a sorrendben:
+//  1. Wake Lock – a böngésző saját funkciója. Csak "biztonságos" helyen
+//     működik: https:// címen, vagy Windowson a helyi fájlnál.
+//     Androidon fájlkezelőből megnyitva (content://) NEM érhető el!
+//  2. Néma mini videó – amíg egy videó fut, a telefon nem kapcsolja ki
+//     a képernyőt. A videónak NINCS hangsávja, ezért nem veszi el
+//     a hangot a felolvasástól.
+
+// Hangsáv nélküli, 2 másodperces, 16x16 pixeles fekete videó (MP4, beágyazva)
+const NEMA_VIDEO_MP4 = "data:video/mp4;base64,AAAAIGZ0eXBpc29tAAACAGlzb21pc28yYXZjMW1wNDEAAAMxbW9vdgAAAGxtdmhkAAAAAAAAAAAAAAAAAAAD6AAAB9AAAQAAAQAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAgAAAlt0cmFrAAAAXHRraGQAAAADAAAAAAAAAAAAAAABAAAAAAAAB9AAAAAAAAAAAAAAAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAABAAAAAAAAAAAAAAAAAABAAAAAABAAAAAQAAAAAAAkZWR0cwAAABxlbHN0AAAAAAAAAAEAAAfQAAAAAAABAAAAAAHTbWRpYQAAACBtZGhkAAAAAAAAAAAAAAAAAABAAAAAgABVxAAAAAAALWhkbHIAAAAAAAAAAHZpZGUAAAAAAAAAAAAAAABWaWRlb0hhbmRsZXIAAAABfm1pbmYAAAAUdm1oZAAAAAEAAAAAAAAAAAAAACRkaW5mAAAAHGRyZWYAAAAAAAAAAQAAAAx1cmwgAAAAAQAAAT5zdGJsAAAAvnN0c2QAAAAAAAAAAQAAAK5hdmMxAAAAAAAAAAEAAAAAAAAAAAAAAAAAAAAAABAAEABIAAAASAAAAAAAAAABFUxhdmM2MC4zMS4xMDIgbGlieDI2NAAAAAAAAAAAAAAAGP//AAAANGF2Y0MBZAAK/+EAF2dkAAqs2V7ARAAAAwAEAAADAAg8SJZYAQAGaOvjyyLA/fj4AAAAABBwYXNwAAAAAQAAAAEAAAAUYnRydAAAAAAAAAtEAAALRAAAABhzdHRzAAAAAAAAAAEAAAACAABAAAAAABRzdHNzAAAAAAAAAAEAAAABAAAAHHN0c2MAAAAAAAAAAQAAAAEAAAACAAAAAQAAABxzdHN6AAAAAAAAAAAAAAACAAACxQAAAAwAAAAUc3RjbwAAAAAAAAABAAADYQAAAGJ1ZHRhAAAAWm1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAG1kaXJhcHBsAAAAAAAAAAAAAAAALWlsc3QAAAAlqXRvbwAAAB1kYXRhAAAAAQAAAABMYXZmNjAuMTYuMTAwAAAACGZyZWUAAALZbWRhdAAAAq0GBf//qdxF6b3m2Ui3lizYINkj7u94MjY0IC0gY29yZSAxNjQgcjMxMDggMzFlMTlmOSAtIEguMjY0L01QRUctNCBBVkMgY29kZWMgLSBDb3B5bGVmdCAyMDAzLTIwMjMgLSBodHRwOi8vd3d3LnZpZGVvbGFuLm9yZy94MjY0Lmh0bWwgLSBvcHRpb25zOiBjYWJhYz0xIHJlZj0zIGRlYmxvY2s9MTowOjAgYW5hbHlzZT0weDM6MHgxMTMgbWU9aGV4IHN1Ym1lPTcgcHN5PTEgcHN5X3JkPTEuMDA6MC4wMCBtaXhlZF9yZWY9MSBtZV9yYW5nZT0xNiBjaHJvbWFfbWU9MSB0cmVsbGlzPTEgOHg4ZGN0PTEgY3FtPTAgZGVhZHpvbmU9MjEsMTEgZmFzdF9wc2tpcD0xIGNocm9tYV9xcF9vZmZzZXQ9LTIgdGhyZWFkcz0xIGxvb2thaGVhZF90aHJlYWRzPTEgc2xpY2VkX3RocmVhZHM9MCBucj0wIGRlY2ltYXRlPTEgaW50ZXJsYWNlZD0wIGJsdXJheV9jb21wYXQ9MCBjb25zdHJhaW5lZF9pbnRyYT0wIGJmcmFtZXM9MyBiX3B5cmFtaWQ9MiBiX2FkYXB0PTEgYl9iaWFzPTAgZGlyZWN0PTEgd2VpZ2h0Yj0xIG9wZW5fZ29wPTAgd2VpZ2h0cD0yIGtleWludD0yNTAga2V5aW50X21pbj0xIHNjZW5lY3V0PTQwIGludHJhX3JlZnJlc2g9MCByY19sb29rYWhlYWQ9NDAgcmM9Y3JmIG1idHJlZT0xIGNyZj0yMy4wIHFjb21wPTAuNjAgcXBtaW49MCBxcG1heD02OSBxcHN0ZXA9NCBpcF9yYXRpbz0xLjQwIGFxPTE6MS4wMACAAAAAEGWIhAAW//730z/MsuyaJYEAAAAIQZohbEFf/vA=";
+
+let ebrenKerve = false;   // true, amíg az Ismétlés vagy a Léptetés fut
+let ebrenModszer = "";    // "wakelock", "video", vagy "" (nincs)
+
+// Állapot kiírása a vezérlőgombok alá
+function frissitEbrenJelzes(szoveg, szin) {
+    const label = document.getElementById('ebrenLabel');
+    label.textContent = szoveg;
+    label.style.color = szin || "";
+}
+
+// Ébren tartás bekapcsolása
+async function kepernyoEbrenTartasBE() {
+    // Ha a beállításokban ki van kapcsolva, nem csinálunk semmit
+    if (!document.getElementById('ebrenCheckbox').checked) return;
+
+    ebrenKerve = true;
+
+    // Ha már működik valamelyik módszer, nincs teendő
+    // (pl. Ismétlés mellé bekapcsolják a Léptetést is)
+    if (ebrenModszer === "wakelock" && wakeLock !== null && !wakeLock.released) return;
+    if (ebrenModszer === "video" && !document.getElementById('ebrenVideo').paused) return;
+
+    let wakeLockHiba = "";
+
+    // ---- 1. módszer: Wake Lock ----
+    if (!window.isSecureContext) {
+        wakeLockHiba = "nem biztonságos megnyitás (" + location.protocol + ")";
+    } else if (!('wakeLock' in navigator)) {
+        wakeLockHiba = "a böngésző nem támogatja";
+    } else {
+        try {
+            wakeLock = await navigator.wakeLock.request('screen');
+            ebrenModszer = "wakelock";
+            frissitEbrenJelzes("☀ Képernyő ébren tartva (Wake Lock)", "green");
+            addLog('Kijelző ébren tartva (Wake Lock).');
+            return;   // sikerült, a videóra nincs szükség
+        } catch (err) {
+            wakeLockHiba = err.message;   // pl. energiatakarékos mód
+        }
+    }
+    addLog('Wake Lock nem elérhető: ' + wakeLockHiba);
+
+    // ---- 2. módszer (tartalék): néma videó ----
+    const video = document.getElementById('ebrenVideo');
+    try {
+        if (!video.src) {
+            video.src = NEMA_VIDEO_MP4;
+        }
+        video.muted = true;   // biztos, ami biztos
+        await video.play();
+        ebrenModszer = "video";
+        frissitEbrenJelzes("☀ Képernyő ébren tartva (néma videó) – Wake Lock: " + wakeLockHiba, "green");
+    } catch (err) {
+        ebrenModszer = "";
+        frissitEbrenJelzes("⚠ A képernyő ébren tartása nem sikerült: " + err.message, "orangered");
+    }
+}
+
+// Ébren tartás kikapcsolása
+// Csak akkor kapcsol ki, ha sem az Ismétlés, sem a Léptetés nem fut már.
+async function kepernyoEbrenTartasKI() {
+    if (autoMode || stepMode) return;
+
+    ebrenKerve = false;
+    ebrenModszer = "";
+
+    // Wake Lock elengedése
+    if (wakeLock !== null) {
+        try { await wakeLock.release(); } catch (err) { /* már el volt engedve */ }
+        wakeLock = null;
+    }
+
+    // Videó leállítása
+    document.getElementById('ebrenVideo').pause();
+
+    frissitEbrenJelzes("");
+}
+
+// A beállítás (jelölőnégyzet) változásakor
+function ebrenBeallitasValtozott() {
+    if (document.getElementById('ebrenCheckbox').checked) {
+        // Ha épp fut az Ismétlés / Léptetés, azonnal bekapcsol
+        if (autoMode || stepMode) kepernyoEbrenTartasBE();
+    } else {
+        // Kikapcsolás: a módoktól függetlenül leállítjuk
+        ebrenKerve = false;
+        if (wakeLock !== null) { wakeLock.release().catch(() => {}); wakeLock = null; }
+        document.getElementById('ebrenVideo').pause();
+        frissitEbrenJelzes("");
+    }
+}
+
+// Ha másik alkalmazásra váltasz, a böngésző elengedi a Wake Lockot
+// és megállítja a videót. Visszatéréskor újra bekapcsoljuk.
+document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && ebrenKerve) {
+        kepernyoEbrenTartasBE();
+    }
+});
+
+// ===== KÉPERNYŐ ÉBREN TARTÁSA VÉGE =====
+
+// ===== KÉZÍRÁSOS GYAKORLÓFELÜLET =====
+
+const canvas = document.getElementById("drawArea");
+const ctx = canvas.getContext("2d");
+const container = document.getElementById("canvasContainer");
+
+let drawing = false;
+
+// DPI-helyes és méretpontos canvas beállítás
+function resizeCanvas() {
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+
+    //canvas.style.width = "100%";
+    canvas.style.height = "300px";   // ← EZT ÁLLÍTSD AMEKKORÁRA AKAROD
+
+    canvas.width = canvas.offsetWidth * dpr;
+    canvas.height = canvas.offsetHeight * dpr;
+
+    ctx.setTransform(1, 0, 0, 1, 0, 0); // reset
+    ctx.scale(dpr, dpr);
+}
+
+resizeCanvas();
+window.addEventListener("resize", resizeCanvas);
+
+// Mutat / Elrejt gomb
+function toggleCanvas() {
+    if (container.style.display === "none") {
+        container.style.display = "block";
+        resizeCanvas();
+    } else {
+        container.style.display = "none";
+    }
+}
+
+// Pozíció meghatározás (egér + érintés)
+function getPos(e) {
+    const rect = canvas.getBoundingClientRect();
+
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
+    return {
+        x: clientX - rect.left,
+        y: clientY - rect.top
+    };
+}
+
+// Rajzolás indítása
+function startDraw(e) {
+    e.preventDefault();
+    drawing = true;
+
+    const pos = getPos(e);
+
+    ctx.beginPath();
+    ctx.moveTo(pos.x, pos.y);
+}
+
+// Rajzolás befejezése
+function endDraw() {
+    drawing = false;
+}
+
+// Rajzolás folyamata
+function draw(e) {
+    if (!drawing) return;
+    e.preventDefault();
+
+    const pos = getPos(e);
+
+    ctx.lineWidth = 3;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "red";
+
+    ctx.lineTo(pos.x, pos.y);
+    ctx.stroke();
+}
+
+// Canvas törlése
+function clearCanvas() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+}
+
+// Egér események
+canvas.addEventListener("mousedown", startDraw);
+canvas.addEventListener("mouseup", endDraw);
+canvas.addEventListener("mouseleave", endDraw);
+canvas.addEventListener("mousemove", draw);
+
+// Érintés események (tablet, stylus)
+canvas.addEventListener("touchstart", startDraw, { passive: false });
+canvas.addEventListener("touchend", endDraw);
+canvas.addEventListener("touchcancel", endDraw);
+canvas.addEventListener("touchmove", draw, { passive: false });
+// ===== CANVAS VÉGE =====
+
+// ===== GÉPELŐS GYAKORLÓ =====
+const typingContainer = document.getElementById("typingContainer");
+const typingArea = document.getElementById("typingArea");
+
+function toggleTyping() {
+    if (typingContainer.style.display === "none") {
+        typingContainer.style.display = "block";
+        typingArea.focus(); // automatikus fókusz
+    } else {
+        typingContainer.style.display = "none";
+    }
+}
+
+// opcionális törlés funkció
+function clearTyping() {
+    typingArea.value = "";
+}
+// ===== GÉPELÉS VÉGE =====
+
+var Languages = {
+  'hu-HU': 0,
+  'en-US': 1,
+  'en-GB': 1,
+  'en-AU': 1,
+  'de-DE': 2,
+  'es-ES': 3,
+  'es-US': 3,
+  'fr-FR': 4,
+  'fr-CA': 4,
+  'it-IT': 5,
+  'tr-TR': 8
+};
+
+</script>
+
+<script>
+window.addEventListener("load", function() {
+    elrendezesValtasa();
+});
+</script>
+
+</body>
+</html>
