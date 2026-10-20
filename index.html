@@ -114,7 +114,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.4</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.5</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -553,6 +553,13 @@
 //        (nincs hangja, ezért nem nyomja el a felolvasást)
 //     A gombsor alatt kiírja, melyik módszer működik, vagy miért nem.
 //     Ki/be kapcsolható a TOVÁBBI BEÁLLÍTÁSOK között.
+// ---------------------------------------------------------------------
+//  v7.5
+// 13. MONDATBONTÁS: csak az a pont (! ? …) mondatvég, amely után szóköz
+//     vagy a szöveg vége jön. Így a "2.0", "3.5", "2.000", "www.x.hu"
+//     nem bomlik szét. A mondatvég utáni záró idézőjel / zárójel
+//     (!”  .»  .) ) a mondathoz tartozik.
+// 14. BOM: a fájl elején lévő összes BOM-jel levágva (nem csak egy).
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -1321,9 +1328,8 @@ function parseCsvLine(line) {
 // - Windows (\r\n) és Unix (\n) sorvégek egyformán kezelve
 // - Üres sorok kihagyása
 function parseCSV(contents) {
-    if (contents.charCodeAt(0) === 0xFEFF) {
-        contents = contents.slice(1);
-    }
+    // v7.5: az összes BOM levágása a fájl elejéről (volt, hogy kettő volt)
+    contents = contents.replace(/^\uFEFF+/, "");
 
     return contents
         .split(/\r?\n/)
@@ -1637,13 +1643,23 @@ var browser = detectBrowser();
 //console.log("A böngésző: " + browser);
 document.getElementById('bongeszo').textContent = browser;
 
-// v7.3: Szöveg darabolása felolvasáshoz.
-// 1. lépés: mondatokra bontás (. ! ? után).
-//    Az írásjel nélküli utolsó rész is megmarad (régen elveszett!).
+// Szöveg darabolása felolvasáshoz.
+// 1. lépés: mondatokra bontás.
+//    v7.5: Mondatvég = . ! ? … (akár több is: "...", "?!"), utána
+//    opcionálisan záró idézőjel / zárójel, és UTÁNA SZÓKÖZ.
+//    A szóköz nélküli pont (2.0, 3.5, 2.000, www.x.hu) NEM mondatvég.
+//    Az írásjel nélküli utolsó rész is megmarad.
 // 2. lépés: ha egy mondat hosszabb, mint maxLen karakter,
 //    szóhatárok (szóközök) mentén tovább bontja.
+const MONDATVEG = /(?<=[.!?\u2026]["'\u201C\u201D\u2019\u00AB\u00BB)\]]*)\s+/;
+
 function splitTextToChunks(text, maxLen) {
-    const sentences = text.match(/[^.!?]+[.!?]*/g) || [text];
+    // Vágás a mondatvég utáni szóközöknél; üres darabok kiszűrve
+    let sentences = text.split(MONDATVEG).filter(function(s) {
+        return s.trim() !== "";
+    });
+    if (sentences.length === 0) sentences = [text];
+
     const chunks = [];
 
     sentences.forEach(function(sentence) {
