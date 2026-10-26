@@ -114,7 +114,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.6</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.7</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -136,7 +136,7 @@
 <div id="csoport1">
      <textarea id="foreignField" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
      <br>
-     <select id="languageSelect" style="font-size: 18px; border-radius: 5px;" onchange="updateFields(); saveSettings()">
+     <select id="languageSelect" style="font-size: 18px; border-radius: 5px;" onchange="updateFields(); updateVoices(1); saveSettings()">
       <option value="hu-HU">Hungarian</option>
       <option value="en-AU">Australia</option>
       <option value="en-GB">English</option>
@@ -169,7 +169,7 @@
 <div id="csoport2">
      <textarea id="hungarianField" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
      <br>
-     <select id="languageSelectHungarian" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+     <select id="languageSelectHungarian" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); updateVoices(2); saveSettings()">
       <option value="hu-HU">Hungarian</option>
       <option value="en-AU">Australia</option>
       <option value="en-GB" selected="">English</option>
@@ -205,7 +205,7 @@
     <textarea id="hungarianField2" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
     <br>
 
-    <select id="languageSelectHungarian2" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+    <select id="languageSelectHungarian2" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); updateVoices(3); saveSettings()">
         <option value="hu-HU">Hungarian</option>
         <option value="en-AU">Australia</option>
         <option value="en-GB">English</option>
@@ -246,7 +246,7 @@
 <div id="csoport4" style="display: none;">
     <textarea id="hungarianField4" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
     <br>
-    <select id="languageSelectHungarian4" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+    <select id="languageSelectHungarian4" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); updateVoices(4); saveSettings()">
         <option value="hu-HU">Hungarian</option>
         <option value="en-AU">Australia</option>
         <option value="en-GB">English</option>
@@ -283,7 +283,7 @@
  <div id="csoport5" style="display: none;">
     <textarea id="hungarianField5" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
     <br>
-    <select id="languageSelectHungarian5" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+    <select id="languageSelectHungarian5" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); updateVoices(5); saveSettings()">
         <option value="hu-HU">Hungarian</option>
         <option value="en-AU">Australia</option>
         <option value="en-GB">English</option>
@@ -322,7 +322,7 @@
     <textarea id="hungarianField6" readonly class="mezo" style="font-size: 18px" rows="8" cols="34" oninput="updateCharCount(this)"></textarea>
     <br>
 
-    <select id="languageSelectHungarian6" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); saveSettings()">
+    <select id="languageSelectHungarian6" class="mezo" style="font-size: 18px; border-radius: 5px" onchange="updateFields(); updateVoices(6); saveSettings()">
         <option value="hu-HU">Hungarian</option>
         <option value="en-AU">Australia</option>
         <option value="en-GB">English</option>
@@ -432,6 +432,12 @@
       <!-- v7.4: Képernyő ébren tartása Ismétlés / Léptetés közben -->
       <label for="ebrenCheckbox" style="font-size: 18px;">Képernyő ébren tartása felolvasás közben:</label>
       <input type="checkbox" id="ebrenCheckbox" class="checkbox" checked onchange="ebrenBeallitasValtozott(); saveSettings()">
+      <hr>
+      <!-- v7.7: Böngésző-hangok listája -->
+      <label for="mindenHangCheckbox" style="font-size: 18px;">Minden hang minden panelen:</label>
+      <input type="checkbox" id="mindenHangCheckbox" class="checkbox" onchange="initVoices(); saveSettings()">
+      <br>
+      <label id="hangSzamLabel" style="font-size: 16px;"></label>
       <hr>
     </div>
         <div style="line-height: 35px;">
@@ -559,6 +565,21 @@
 //       (páratlan számnál fekvő nézetben a következő párosat mutatja,
 //        pl. álló 3 → fekvő 4; visszaváltva álló nézetre újra 3 lesz)
 //     A beállítást a program megjegyzi.
+// ---------------------------------------------------------------------
+//  v7.7
+// 16. HANGLISTÁK:
+//     - Nyelvváltáskor és a beállítások betöltése után a panel
+//       hanglistája frissül (régen csak induláskor, még a mentett
+//       nyelvek visszaállítása ELŐTT töltődött fel → rossz nyelv hangjai).
+//     - Tágabb nyelvi egyezés: angol panelen minden angol hang
+//       (en-US, en-GB, en-AU ...), a pontosan egyezők a lista elején.
+//     - "Minden hang" jelölő a beállítások között: bekapcsolva az összes
+//       hang választható bármelyik panelen (mint a v6.2-ben).
+//     - A kiválasztott hangot NÉV szerint jegyzi meg (régen a listabeli
+//       sorszámot, ami a lista változásakor más hangra mutathatott).
+//       A régi, sorszámos mentést egyszer még átalakítja névre.
+//     - A hibás ("undefined" nevű) Edge-hangokat kiszűri.
+//     - A beállításoknál kiírja, hány hangot ad a böngésző.
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -654,14 +675,20 @@ function speakSinglePanel(id) {
     speakPanelCallback(id, function(){});
 }
 
+// v7.7: A panelenként kiválasztott böngésző-hang NEVE.
+// (Régen a BE gomb felirata tárolta a listabeli sorszámot.)
+// Pl. valasztottHang[2] = "Microsoft Noemi Online (Natural) - Hungarian (Hungary)"
+const valasztottHang = {};
+
+// v7.7: Régi (v7.6 és korábbi) mentésből a hang sorszáma – egyszeri átalakításhoz
+const regiHangIndex = {};
+
 function changeVoiceSelect(panelIndex) {
     const p = panels[panelIndex - 1];
-
     const voiceSelect = document.getElementById(p.voiceId);
-    const beButton = document.getElementById(p.beId);
 
-    const selectedVoiceIndex = voiceSelect.value;
-    beButton.textContent = selectedVoiceIndex;
+    // v7.7: a hang nevét jegyezzük meg (a lista option értéke a név)
+    valasztottHang[p.id] = voiceSelect.value;
 
     saveSettings();
 }
@@ -694,53 +721,102 @@ function toggleVoiceMode(panelIndex) {
     }
 }
 
+// ===== HANGLISTÁK (v7.7) =====
+
+// Nyelvkód egységesítése: "en_US" / "EN-us" → "en-us"
+// (Androidon néha aláhúzással jön a nyelvkód.)
+function nyelvKod(lang) {
+    return String(lang || "").replace("_", "-").toLowerCase();
+}
+
+// Az elérhető, használható böngésző-hangok.
+// A hibás ("undefined" nevű) Edge-hangokat kihagyjuk.
+function hasznalhatoHangok() {
+    return window.speechSynthesis.getVoices()
+        .filter(v => v.name && !v.name.includes("undefined"));
+}
+
+// Egy panel nyelvéhez illő hangok.
+// - "Minden hang" bekapcsolva: az összes hang
+// - különben: azonos alapnyelv (pl. "en" → en-US, en-GB, en-AU ...)
+// Sorrend: a pontosan egyező nyelvűek elöl (pl. en-GB panelen az en-GB hangok).
+function panelHangjai(lang) {
+    const hangok = hasznalhatoHangok();
+    const cel = nyelvKod(lang);
+    const alapNyelv = cel.split("-")[0];   // "en-gb" → "en"
+
+    let lista;
+    if (document.getElementById("mindenHangCheckbox").checked) {
+        lista = hangok.slice();
+    } else {
+        lista = hangok.filter(v => nyelvKod(v.lang).split("-")[0] === alapNyelv);
+    }
+
+    // Pontos egyezés előre, egyébként az eredeti sorrend marad
+    const pontos = lista.filter(v => nyelvKod(v.lang) === cel);
+    const tobbi = lista.filter(v => nyelvKod(v.lang) !== cel);
+    return pontos.concat(tobbi);
+}
+
+// Egy panel hanglistájának feltöltése
 function updateVoices(panelIndex) {
     const p = panels[panelIndex - 1];
 
     const voiceSelect = document.getElementById(p.voiceId);
-    const langSelect = document.getElementById(p.langId);
-    const selectedLang = langSelect.value;
+    const lang = document.getElementById(p.langId).value;
 
-    const voices = window.speechSynthesis.getVoices();
+    // v7.7: Régi, sorszámos mentés egyszeri átalakítása névre.
+    // A régi program a PONTOSAN egyező nyelvű hangok listájában tárolta a sorszámot.
+    if (valasztottHang[p.id] === undefined && regiHangIndex[p.id] !== undefined) {
+        const regiLista = window.speechSynthesis.getVoices().filter(v => v.lang === lang);
+        if (regiLista[regiHangIndex[p.id]]) {
+            valasztottHang[p.id] = regiLista[regiHangIndex[p.id]].name;
+            delete regiHangIndex[p.id];
+        }
+    }
 
-    // Hanglista törlése
+    // Hanglista törlése és újratöltése
     voiceSelect.innerHTML = "";
 
-    // Csak a megfelelő nyelvű hangok
-    const filteredVoices = voices.filter(v => v.lang === selectedLang);
-
-    filteredVoices.forEach((voice, index) => {
+    panelHangjai(lang).forEach(voice => {
         const option = document.createElement("option");
-        option.value = index;
+        option.value = voice.name;   // v7.7: az érték a hang NEVE (nem sorszám)
         option.textContent = voice.name + " (" + voice.lang + ")";
         voiceSelect.appendChild(option);
     });
 
-    // BE gomb alapján visszaállítás
-    const beButton = document.getElementById(p.beId);
-    const savedIndex = parseInt(beButton.textContent);
-
-    if (!isNaN(savedIndex) && savedIndex < filteredVoices.length) {
-        voiceSelect.selectedIndex = savedIndex;
-    }
+    // A megjegyzett hang kiválasztása (ha szerepel a listában)
+    restoreVoiceSelection(panelIndex);
 }
 
-// v7.3: Segédfüggvény – a BE gombon tárolt hangindex visszaállítása a listában.
-// Régebben ezt a felolvasás a BE gomb "click()"-jével oldotta meg, ami a
-// loadVoice-on keresztül hibát dobott. Most közvetlenül ez a függvény végzi.
+// A megjegyzett hang kiválasztása a listában (név szerint).
+// Ha a hang (még) nincs a listában – pl. az online hangok később töltődnek be –,
+// a megjegyzett nevet NEM töröljük, így később megtalálja.
 function restoreVoiceSelection(panelIndex) {
     const p = panels[panelIndex - 1];
 
     const voiceSelect = document.getElementById(p.voiceId);
-    const beButton = document.getElementById(p.beId);
+    const nev = valasztottHang[p.id];
 
-    // A BE gomb a voiceSelect indexét tárolja
-    const savedIndex = parseInt(beButton.textContent);
+    if (!nev) return;
 
-    if (!isNaN(savedIndex) && savedIndex < voiceSelect.options.length) {
-        voiceSelect.selectedIndex = savedIndex;
+    for (let i = 0; i < voiceSelect.options.length; i++) {
+        if (voiceSelect.options[i].value === nev) {
+            voiceSelect.selectedIndex = i;
+            return;
+        }
     }
 }
+
+// Hány hangot ad a böngésző – kiírás a beállításoknál
+function frissitHangSzam() {
+    const label = document.getElementById("hangSzamLabel");
+    if (label) {
+        label.textContent = "A böngésző által adott hangok száma: " + hasznalhatoHangok().length;
+    }
+}
+
+// ===== HANGLISTÁK VÉGE =====
 
 function loadVoice(panelIndex) {
     // Mentett hang visszaállítása
@@ -856,18 +932,21 @@ function speakPanelCallback(panelId, done) {
     // Hang kiválasztása (csak böngésző módban)
     let voice = null;
     if (bong.checked) {
+        // v7.7: a hangot NÉV szerint keressük (régen sorszám szerint)
         const voices = speechSynthesis.getVoices();
-        const filtered = voices.filter(v => v.lang === lang);
-        const idx = parseInt(voiceSelect.value);
-        if (filtered[idx]) voice = filtered[idx];
+        voice = voices.find(v => v.name === voiceSelect.value) || null;
     }
+
+    // v7.7: ha a "Minden hang" miatt más nyelvű hangot választottak,
+    // a felolvasás nyelve a hangé legyen (különben a böngésző eldobhatja a hangot)
+    const beszedNyelv = voice ? voice.lang : lang;
 
     // Kiemelés felolvasás közben
     textArea.style.boxShadow = "0 0 10px yellow";
 
     // v7.3: A felolvasást a speakTextInChunks végzi.
     // Ha a "Tördelés" be van kapcsolva, darabokban olvas, különben egyben.
-    speakTextInChunks(text, lang, rate, voice, function () {
+    speakTextInChunks(text, beszedNyelv, rate, voice, function () {
         textArea.style.boxShadow = "";
         done();
     });
@@ -999,6 +1078,7 @@ window.onload = function() {
   detectOS();
   loadSettings();
   elrendezesValtasa();   // v7.6: a mentett mezőszám és álló/fekvő szerint
+  initVoices();          // v7.7: hanglisták a mentett nyelvek szerint
   loadLastOpenedFile();
   updateSize();
   updateTordelesUI();   // v7.3: a mentett beállítás szerint mutatja/rejti
@@ -1015,6 +1095,7 @@ function initVoices() {
     updateVoices(4);
     updateVoices(5);
     updateVoices(6);
+    frissitHangSzam();   // v7.7
 }
 
 // 1) Azonnal meghívjuk
@@ -1032,9 +1113,10 @@ function saveSettings() {
     // Panelenkénti beállítások mentése
     for (let p of panels) {
 
-        // BE gomb értéke
-        const beButton = document.getElementById(p.beId);
-        localStorage.setItem(`BE_${p.id}`, beButton.textContent);
+        // v7.7: kiválasztott böngésző-hang neve (régen BE gomb felirata = sorszám)
+        if (valasztottHang[p.id]) {
+            localStorage.setItem(`VOICE_${p.id}`, valasztottHang[p.id]);
+        }
 
         // Nyelv
         const langSelect = document.getElementById(p.langId);
@@ -1074,6 +1156,9 @@ function saveSettings() {
 
     // v7.6: Látható mezők száma
     localStorage.setItem("MezoSzam", mezoSzam);
+
+    // v7.7: Minden hang minden panelen
+    localStorage.setItem("MindenHang", document.getElementById("mindenHangCheckbox").checked);
 }
 
 function loadSettings() {
@@ -1101,10 +1186,17 @@ function loadSettings() {
             document.getElementById(p.bongId).checked = true;
         }
 
-        // BE gomb visszatöltése
-        const savedBE = localStorage.getItem(`BE_${p.id}`);
-        if (savedBE !== null) {
-            document.getElementById(p.beId).textContent = savedBE;
+        // v7.7: kiválasztott hang neve
+        const savedVoice = localStorage.getItem(`VOICE_${p.id}`);
+        if (savedVoice) {
+            valasztottHang[p.id] = savedVoice;
+        } else {
+            // Régi mentés (v7.6 és korábbi): a hang sorszáma a BE gombon.
+            // Az updateVoices egyszer átalakítja névre.
+            const savedBE = parseInt(localStorage.getItem(`BE_${p.id}`));
+            if (!isNaN(savedBE)) {
+                regiHangIndex[p.id] = savedBE;
+            }
         }
     }
 
@@ -1131,6 +1223,10 @@ function loadSettings() {
         mezoSzam = mentettMezoSzam;
     }
 
+    // v7.7: Minden hang minden panelen (alapból kikapcsolva)
+    document.getElementById("mindenHangCheckbox").checked =
+        (localStorage.getItem("MindenHang") === "true");
+
     // v7.4: Képernyő ébren tartása (alapból bekapcsolva)
     const ebren = localStorage.getItem("EbrenTartas");
     if (ebren !== null) {
@@ -1150,6 +1246,7 @@ function resetSettings() {
     // Panelenkénti beállítások törlése
     for (let p of panels) {
         localStorage.removeItem(`BE_${p.id}`);
+        localStorage.removeItem(`VOICE_${p.id}`);   // v7.7
         localStorage.removeItem(`LANG_${p.id}`);
         localStorage.removeItem(`SPEED_${p.id}`);
         localStorage.removeItem(`MODE_${p.id}`);
@@ -1166,6 +1263,7 @@ function resetSettings() {
     localStorage.removeItem("szunethossza");
     localStorage.removeItem("EbrenTartas");   // v7.4
     localStorage.removeItem("MezoSzam");      // v7.6
+    localStorage.removeItem("MindenHang");    // v7.7
 
     // Fájl adatok törlése
     localStorage.removeItem("lastOpenedFileName");
