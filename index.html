@@ -89,6 +89,12 @@
         /*font-family: 'Kalam', cursive;*/
         /*font-family: 'Kalam', 'Patrick Hand', 'Dancing Script', cursive;*/
     }
+    /* v7.8: Szókiemelés – a felolvasott szó (sötét módban is olvasható) */
+    .szoKiemeles mark {
+        background-color: yellow;
+        color: black;
+        border-radius: 3px;
+    }
     .log-hidden {
         display: none;
     }
@@ -114,7 +120,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.7</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.8</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -477,6 +483,10 @@
         <label id="karakterLabel" style="font-size: 18px; margin-left: 10px;">karakterenként</label>
         <hr>
         </div>
+        <!-- v7.8: Szókiemelés felolvasás közben -->
+        <label for="szoKiemelesCheckbox" style="font-size: 18px; margin-left: 10px;">Felolvasott szó kiemelése:</label>
+        <input type="checkbox" id="szoKiemelesCheckbox" class="checkbox" checked onchange="saveSettings()">
+        <hr>
         <button onclick="resetSettings()" class="button" style="color: white; background-color: orangered">Összes beállítás alaphelyzetbe állítása</button><hr>
         <div style="display: none;">
         <label style="font-size: 18px;">Képernyő elalvás blokkolása:</label><br>
@@ -580,6 +590,16 @@
 //       A régi, sorszámos mentést egyszer még átalakítja névre.
 //     - A hibás ("undefined" nevű) Edge-hangokat kiszűri.
 //     - A beállításoknál kiírja, hány hangot ad a böngésző.
+// ---------------------------------------------------------------------
+//  v7.8
+// 17. SZÓKIEMELÉS: felolvasás közben az éppen felolvasott szó sárga
+//     háttérrel kiemelve látszik. Ki/be kapcsolható a beállítások alján.
+//     - A böngésző "boundary" jelzését használja (szó eleje + helye).
+//     - Felolvasás alatt a szövegdoboz helyén egy ugyanakkora megjelenítő
+//       látszik (szövegdobozban nem lehet egy szót kiszínezni),
+//       a végén / Stop-ra visszaáll az eredeti szövegdoboz.
+//     - Ha a hang nem küld jelzést (pl. Chrome Google-hangok), nincs
+//       szókiemelés, a felolvasás ugyanúgy működik.
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -946,10 +966,19 @@ function speakPanelCallback(panelId, done) {
 
     // v7.3: A felolvasást a speakTextInChunks végzi.
     // Ha a "Tördelés" be van kapcsolva, darabokban olvas, különben egyben.
+    // v7.8: Szókiemelés (ha be van kapcsolva)
+    let onWord = null;
+    if (document.getElementById("szoKiemelesCheckbox").checked) {
+        onWord = function(kezdet, hossz) {
+            szoKiemelese(textArea, text, kezdet, hossz);
+        };
+    }
+
     speakTextInChunks(text, beszedNyelv, rate, voice, function () {
         textArea.style.boxShadow = "";
+        szoKiemelesVege(textArea);   // v7.8: eredeti szövegdoboz vissza
         done();
-    });
+    }, onWord);
 }
 
 // ===== LÁTHATÓ MEZŐK SZÁMA (v7.6) =====
@@ -1159,6 +1188,9 @@ function saveSettings() {
 
     // v7.7: Minden hang minden panelen
     localStorage.setItem("MindenHang", document.getElementById("mindenHangCheckbox").checked);
+
+    // v7.8: Szókiemelés
+    localStorage.setItem("SzoKiemeles", document.getElementById("szoKiemelesCheckbox").checked);
 }
 
 function loadSettings() {
@@ -1227,6 +1259,12 @@ function loadSettings() {
     document.getElementById("mindenHangCheckbox").checked =
         (localStorage.getItem("MindenHang") === "true");
 
+    // v7.8: Szókiemelés (alapból bekapcsolva)
+    const szoKiemeles = localStorage.getItem("SzoKiemeles");
+    if (szoKiemeles !== null) {
+        document.getElementById("szoKiemelesCheckbox").checked = (szoKiemeles === "true");
+    }
+
     // v7.4: Képernyő ébren tartása (alapból bekapcsolva)
     const ebren = localStorage.getItem("EbrenTartas");
     if (ebren !== null) {
@@ -1264,6 +1302,7 @@ function resetSettings() {
     localStorage.removeItem("EbrenTartas");   // v7.4
     localStorage.removeItem("MezoSzam");      // v7.6
     localStorage.removeItem("MindenHang");    // v7.7
+    localStorage.removeItem("SzoKiemeles");   // v7.8
 
     // Fájl adatok törlése
     localStorage.removeItem("lastOpenedFileName");
@@ -1851,7 +1890,10 @@ function updateTordelesUI() {
 }
 
 //Hosszú szöveg darabolása
-function speakTextInChunks(text, lang, rate, voice, onEndCallback) {
+// v7.8: Új, nem kötelező paraméter: onWord(kezdet, hossz)
+// Minden felolvasott szó elején meghívódik; a kezdet a TELJES szövegen
+// belüli karakter-pozíció (tördelésnél is), a hossz lehet undefined.
+function speakTextInChunks(text, lang, rate, voice, onEndCallback, onWord) {
     var checkboxTordeles = document.getElementById('Tordeles');     //ha engedélyezve van
 
     if (checkboxTordeles.checked) {
@@ -1861,6 +1903,17 @@ function speakTextInChunks(text, lang, rate, voice, onEndCallback) {
         let sentences = splitTextToChunks(text, maxLen); // Regex a mondatok felismeréséhez
 
         let currentIndex = 0;
+
+        // v7.8: Minden darab kezdőpozíciója a teljes szövegben
+        // (hogy a darabon belüli szóhelyből a teljes szövegbeli helyet kapjuk)
+        let chunkStarts = [];
+        let keresesInnen = 0;
+        sentences.forEach(function(s) {
+            let pos = text.indexOf(s.trim(), keresesInnen);
+            if (pos < 0) pos = keresesInnen;   // biztonsági tartalék
+            chunkStarts.push(pos);
+            keresesInnen = pos + s.trim().length;
+        });
 
         function speakNextChunk() {
             // Ellenőrizzük, hogy a beszédet leállították-e
@@ -1879,6 +1932,14 @@ function speakTextInChunks(text, lang, rate, voice, onEndCallback) {
                 utterance.lang = lang;
                 utterance.rate = rate;
                 utterance.voice = voice;
+
+                // v7.8: Szóhatár-jelzés → kiemelés (a darab kezdőpozíciójával eltolva)
+                let eltolas = chunkStarts[currentIndex];
+                utterance.onboundary = function(event) {
+                    if (onWord && (event.name === "word" || event.name === undefined)) {
+                        onWord(eltolas + event.charIndex, event.charLength);
+                    }
+                };
 
                 utterance.onend = function() {
                     currentIndex++;
@@ -1906,6 +1967,13 @@ function speakTextInChunks(text, lang, rate, voice, onEndCallback) {
         utterance.lang = lang;
         utterance.rate = rate;
         utterance.voice = voice;
+
+        // v7.8: Szóhatár-jelzés → kiemelés
+        utterance.onboundary = function(event) {
+            if (onWord && (event.name === "word" || event.name === undefined)) {
+                onWord(event.charIndex, event.charLength);
+            }
+        };
 
         // Ellenőrizzük, hogy a beszédet leállították-e
         if (isSpeakingCancelled) {
@@ -2083,7 +2151,10 @@ function stopSpeaking() {
 function clearAllHighlights() {
     for (let p of panels) {
         const ta = document.getElementById(p.textId);
-        if (ta) ta.style.boxShadow = "";
+        if (ta) {
+            ta.style.boxShadow = "";
+            szoKiemelesVege(ta);   // v7.8
+        }
     }
 }
 
@@ -2263,6 +2334,104 @@ function refreshCsvTable(sourceData) {
     createCsvTableHeader(tableSourceData[0].length);
     loadNext100();
 }
+
+// ===== SZÓKIEMELÉS (v7.8) =====
+//
+// A szövegdobozban (textarea) nem lehet egyetlen szót kiszínezni.
+// Ezért az első kiemeléskor a szövegdoboz mögé egy ugyanakkora
+// megjelenítőt (div) teszünk, a szövegdobozt elrejtjük, és a
+// megjelenítőben az aktuális szót <mark> jelöléssel kiemeljük.
+// A felolvasás végén (vagy Stop-ra) a szövegdoboz visszaáll.
+
+// HTML-ben különleges jelek (< > &) biztonságos kiírása
+function htmlSzoveg(s) {
+    return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
+// A szövegdobozhoz tartozó megjelenítő elkészítése (vagy a meglévő visszaadása)
+function kiemeloMegjelenito(textArea) {
+    const id = textArea.id + "_kiemeles";
+    let div = document.getElementById(id);
+
+    if (!div) {
+        div = document.createElement("div");
+        div.id = id;
+        div.className = "szoKiemeles";
+        textArea.parentNode.insertBefore(div, textArea.nextSibling);
+    }
+
+    div.style.display = "inline-block";
+    div.style.boxShadow = textArea.style.boxShadow;   // sárga keret felolvasás közben
+
+    // A kinézetet csak akkor vesszük át, amikor a szövegdoboz még látszik
+    // (az első szónál). Elrejtve a mérete 0 lenne.
+    if (textArea.offsetWidth === 0) {
+        return div;
+    }
+
+    // Kinézet átvétele a szövegdoboztól (betű, keret, színek, méret)
+    const st = window.getComputedStyle(textArea);
+    div.style.verticalAlign = st.verticalAlign;
+    div.style.boxSizing = "border-box";
+    div.style.width = textArea.offsetWidth + "px";
+    div.style.height = textArea.offsetHeight + "px";
+    div.style.overflowY = "auto";
+    div.style.position = "relative";      // a görgetés számításához
+    div.style.textAlign = "left";
+    div.style.whiteSpace = "pre-wrap";    // sortörések, szóközök megmaradnak
+    div.style.wordWrap = "break-word";
+    div.style.font = st.font;
+    div.style.lineHeight = st.lineHeight;
+    div.style.padding = st.padding;
+    div.style.border = st.border;
+    div.style.borderRadius = st.borderRadius;
+    div.style.color = st.color;
+    div.style.backgroundColor = st.backgroundColor;
+
+    return div;
+}
+
+// Egy szó kiemelése.
+// kezdet: a szó első karakterének helye a szövegben
+// hossz:  a szó hossza (egyes böngészők nem adják meg → kiszámoljuk)
+function szoKiemelese(textArea, text, kezdet, hossz) {
+    if (kezdet === undefined || kezdet < 0 || kezdet >= text.length) return;
+
+    // Ha a hossz hiányzik: a szó végéig (szóközig vagy írásjelig) tart
+    if (!hossz) {
+        const m = text.slice(kezdet).match(/^[^\s.,!?;:"„”“'()…]+/);
+        hossz = m ? m[0].length : 1;
+    }
+
+    const div = kiemeloMegjelenito(textArea);
+
+    div.innerHTML =
+        htmlSzoveg(text.slice(0, kezdet)) +
+        "<mark>" + htmlSzoveg(text.slice(kezdet, kezdet + hossz)) + "</mark>" +
+        htmlSzoveg(text.slice(kezdet + hossz));
+
+    // Szövegdoboz elrejtése, megjelenítő látszik
+    textArea.style.display = "none";
+
+    // Hosszú szövegnél görgetés, hogy a kiemelt szó látsszon
+    const mark = div.querySelector("mark");
+    if (mark) {
+        const cel = mark.offsetTop - div.clientHeight / 2;
+        div.scrollTop = Math.max(0, cel);
+    }
+}
+
+// Kiemelés vége: megjelenítő el, eredeti szövegdoboz vissza
+function szoKiemelesVege(textArea) {
+    const div = document.getElementById(textArea.id + "_kiemeles");
+    if (div) {
+        div.style.display = "none";
+        div.innerHTML = "";
+    }
+    textArea.style.display = "";
+}
+
+// ===== SZÓKIEMELÉS VÉGE =====
 
 // ===== KÉPERNYŐ ÉBREN TARTÁSA (v7.4) =====
 //
