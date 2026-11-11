@@ -120,7 +120,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.8</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.9</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -507,6 +507,11 @@
         </div>
     </div>
     <hr>
+    <!-- v7.9: Böngésző tárhely használata -->
+    <div style="text-align: center;">
+        <label id="tarhelyLabel" style="font-size: 14px;"></label>
+    </div>
+    <hr>
     <div id="csvTableContainer" style="display:none; margin:20px;">
     <h3 style="text-align:center;">Betöltött fájl tartalma</h3>
 
@@ -600,6 +605,13 @@
 //       a végén / Stop-ra visszaáll az eredeti szövegdoboz.
 //     - Ha a hang nem küld jelzést (pl. Chrome Google-hangok), nincs
 //       szókiemelés, a felolvasás ugyanúgy működik.
+// ---------------------------------------------------------------------
+//  v7.9
+// 18. TÁRHELY INFÓ: legalul (a táblázat előtt) egy sor mutatja, mennyi
+//     adat van a böngésző tárhelyén (localStorage), és ebből mennyi
+//     a megjegyzett fájl. Fontos: ugyanarról a helyről megnyitott
+//     programok (pl. minden hegsanya.github.io-s program, vagy minden
+//     helyi fájlként megnyitott program) KÖZÖS tárhelyet használnak!
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -1109,6 +1121,7 @@ window.onload = function() {
   elrendezesValtasa();   // v7.6: a mentett mezőszám és álló/fekvő szerint
   initVoices();          // v7.7: hanglisták a mentett nyelvek szerint
   loadLastOpenedFile();
+  frissitTarhelyInfo();   // v7.9: tárhely infósor
   updateSize();
   updateTordelesUI();   // v7.3: a mentett beállítás szerint mutatja/rejti
   for (let i = 1; i <= 6; i++) {
@@ -1324,6 +1337,8 @@ function saveLastOpenedFile(fileName, fileContent) {
         alert("A fájl túl nagy ahhoz, hogy a böngésző megjegyezze.\n" +
               "Most használható, de legközelebb újra be kell tölteni.");
     }
+
+    frissitTarhelyInfo();   // v7.9: tárhely infósor
 }
 
 function loadLastOpenedFile() {
@@ -2432,6 +2447,61 @@ function szoKiemelesVege(textArea) {
 }
 
 // ===== SZÓKIEMELÉS VÉGE =====
+
+// ===== TÁRHELY INFÓ (v7.9) =====
+//
+// A böngésző tárhelye (localStorage) karakterenként 2 bájtot foglal,
+// ezért egy 5 MB-os szöveges fájl kb. 10 MB helyet foglal el.
+// A határ böngészőnként más (Chrome / Edge: kb. 10 MB).
+//
+// FIGYELEM: a tárhely a megnyitás HELYÉHEZ tartozik, nem a programhoz.
+// Minden hegsanya.github.io-s program ugyanazt a tárhelyet használja,
+// és a helyi fájlként megnyitott programok is egy közös tárhelyen vannak.
+
+// Egy szöveg mérete MB-ban (karakterenként 2 bájt)
+function tarhelyMB(karakterSzam) {
+    return (karakterSzam * 2 / 1024 / 1024).toFixed(2);
+}
+
+// Az infósor frissítése
+function frissitTarhelyInfo() {
+    const label = document.getElementById("tarhelyLabel");
+    if (!label) return;
+
+    let osszes = 0;     // az összes mentett adat (karakterben)
+    let fajl = 0;       // ebből a megjegyzett fájl (karakterben)
+
+    try {
+        for (let i = 0; i < localStorage.length; i++) {
+            const kulcs = localStorage.key(i);
+            const ertek = localStorage.getItem(kulcs) || "";
+            osszes += kulcs.length + ertek.length;
+
+            if (kulcs === "lastOpenedFileContent") {
+                fajl = ertek.length;
+            }
+        }
+    } catch (err) {
+        label.textContent = "Böngésző tárhely: nem olvasható";
+        return;
+    }
+
+    // A megjegyzett fájl neve (ha van)
+    const fajlNev = localStorage.getItem("lastOpenedFileName");
+
+    let szoveg = "Böngésző tárhely: " + tarhelyMB(osszes) + " MB összesen";
+    if (fajl > 0) {
+        szoveg += " – ebből a megjegyzett fájl" +
+                  (fajlNev ? " (" + fajlNev + ")" : "") +
+                  ": " + tarhelyMB(fajl) + " MB";
+    } else {
+        szoveg += " – nincs megjegyzett fájl";
+    }
+
+    label.textContent = szoveg;
+}
+
+// ===== TÁRHELY INFÓ VÉGE =====
 
 // ===== KÉPERNYŐ ÉBREN TARTÁSA (v7.4) =====
 //
