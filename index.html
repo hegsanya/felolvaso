@@ -120,7 +120,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v8.0</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v8.1</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -618,6 +618,11 @@
 //     elfoglalná a többi program helyét is). Minden indításkor újra meg
 //     kell nyitni. Weboldalként megnyitva az alapszótár magától betöltődik.
 //     Egy korábbi verzióban elmentett fájlt induláskor töröl.
+// ---------------------------------------------------------------------
+//  v8.1
+// 20. "Összes szűrés törlése": NEM tölti újra az oldalt (újratöltéskor
+//     a megnyitott fájl elveszne, mert már nem mentjük). Helyette a
+//     szűrőket törli, és a teljes betöltött listát mutatja.
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -1153,8 +1158,31 @@ initVoices();
 speechSynthesis.onvoiceschanged = initVoices;
 
 // Funkció az oldal frissítésére
+// "Összes szűrés törlése" gomb
+// v8.1: Régen újratöltötte az oldalt. Mivel a CSV fájlt már nem mentjük,
+// újratöltéskor a megnyitott fájl elveszne. Ezért most csak a szűrőket
+// állítja alaphelyzetbe, a betöltött adatok megmaradnak.
 function refreshPage() {
-    location.reload();  // Ez újratölti az oldalt
+    // Dátumszűrő mezők ürítése
+    document.getElementById('date1').value = "";
+    document.getElementById('date2').value = "";
+
+    // Szövegkeresés ürítése
+    document.getElementById('searchInput').value = "";
+
+    // Téma: semmi sincs kijelölve, a jelölő az alapállásban
+    const temaSelect = document.getElementById('temaSelect');
+    for (let i = 0; i < temaSelect.options.length; i++) {
+        temaSelect.options[i].selected = false;
+    }
+    document.getElementById('toggleCheckbox').checked = true;
+    updateLabel();
+
+    // A teljes betöltött lista, az első sortól
+    filteredData = csvData;
+    currentRowIndex = 0;
+    updateFields();
+    refreshCsvTable(filteredData);
 }
 
 function saveSettings() {
