@@ -120,7 +120,7 @@
 <div class="cimcsoport">
         <button onclick="toggleDarkMode(); saveSettings()" class="button"> FEKETE</button>
         <button onclick="toggleBlueMode(); saveSettings()" class="button"> SZÜRKE</button>
-        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v7.9</label>
+        <label style="font-size: 16px; font-family: Calibri;">Hegedüs - Felolvasó v8.0</label>
         <div class="FOCIM">
         <hr>
         <label style="font-size: 22px; font-family: Algerian; font-weight: bold; text-shadow: 2px 2px 0 black, 4px 4px 5px rgba(200, 200, 200, 0.5);;">- HANGOS - SZÓKINCS - GYAKORLÓ -</label>
@@ -612,6 +612,12 @@
 //     a megjegyzett fájl. Fontos: ugyanarról a helyről megnyitott
 //     programok (pl. minden hegsanya.github.io-s program, vagy minden
 //     helyi fájlként megnyitott program) KÖZÖS tárhelyet használnak!
+// ---------------------------------------------------------------------
+//  v8.0
+// 19. A CSV FÁJLT A PROGRAM NEM MENTI a böngésző tárhelyére (nagy fájl,
+//     elfoglalná a többi program helyét is). Minden indításkor újra meg
+//     kell nyitni. Weboldalként megnyitva az alapszótár magától betöltődik.
+//     Egy korábbi verzióban elmentett fájlt induláskor töröl.
 // =====================================================================
 
 // ===== PANEL DEFINÍCIÓK =====
@@ -1324,33 +1330,15 @@ function resetSettings() {
     window.location.reload();
 }
 
-function saveLastOpenedFile(fileName, fileContent) {
-    // v7.3: A localStorage mérete korlátos (kb. 5 MB).
-    // Ha a fájl túl nagy, a mentés hibát dob – ezt elkapjuk, hogy a betöltés
-    // ettől még rendben lefusson. Ilyenkor csak a "legutóbbi fájl" emlékezés marad el.
-    try {
-        localStorage.setItem("lastOpenedFileName", fileName);
-        localStorage.setItem("lastOpenedFileContent", fileContent); // Fájl tartalom mentése
-    } catch (err) {
-        localStorage.removeItem("lastOpenedFileName");
-        localStorage.removeItem("lastOpenedFileContent");
-        alert("A fájl túl nagy ahhoz, hogy a böngésző megjegyezze.\n" +
-              "Most használható, de legközelebb újra be kell tölteni.");
-    }
-
-    frissitTarhelyInfo();   // v7.9: tárhely infósor
-}
-
+// v8.0: A CSV fájlt a program NEM menti el a böngésző tárhelyére.
+// (A korábbi saveLastOpenedFile kivéve.)
+// Egy régebbi verzióban elmentett fájlt itt törlünk, hogy felszabaduljon a hely.
 function loadLastOpenedFile() {
-    const lastOpenedFileName = localStorage.getItem("lastOpenedFileName");
-    const lastOpenedFileContent = localStorage.getItem("lastOpenedFileContent");
+    localStorage.removeItem("lastOpenedFileName");
+    localStorage.removeItem("lastOpenedFileContent");
 
-    if (lastOpenedFileName && lastOpenedFileContent) {
-        document.getElementById('fileNameDisplay').value = lastOpenedFileName;
-        readCSVFromContent(lastOpenedFileContent);
-    } else {
-        loadDefaultCSV();
-    }
+    // Weboldalként megnyitva az alapszótár betöltése
+    loadDefaultCSV();
 }
 
 // Alapértelmezett szótár: ha nincs korábban megnyitott fájl, a weboldal
@@ -1676,11 +1664,10 @@ function readCSV(file) {
 
         // v7.3: a feldolgozást a közös readCSVFromContent végzi
         if (!readCSVFromContent(contents)) {
-            return; // hibás fájl – nem mentjük el
+            return; // hibás fájl
         }
 
-        // Fájl mentése
-        saveLastOpenedFile(file.name, contents);
+        // v8.0: a fájlt NEM mentjük el, csak a nevét írjuk ki
         document.getElementById('fileNameDisplay').value = file.name;
 
         // v7.3: hogy ugyanazt a fájlt újra ki lehessen választani
@@ -2464,41 +2451,27 @@ function tarhelyMB(karakterSzam) {
 }
 
 // Az infósor frissítése
+// v8.0: a CSV fájlt már nem mentjük, ezért csak az összes foglalt helyet mutatja
+// (ebben a többi, ugyanarról a helyről megnyitott program mentései is benne vannak).
 function frissitTarhelyInfo() {
     const label = document.getElementById("tarhelyLabel");
     if (!label) return;
 
     let osszes = 0;     // az összes mentett adat (karakterben)
-    let fajl = 0;       // ebből a megjegyzett fájl (karakterben)
 
     try {
         for (let i = 0; i < localStorage.length; i++) {
             const kulcs = localStorage.key(i);
             const ertek = localStorage.getItem(kulcs) || "";
             osszes += kulcs.length + ertek.length;
-
-            if (kulcs === "lastOpenedFileContent") {
-                fajl = ertek.length;
-            }
         }
     } catch (err) {
         label.textContent = "Böngésző tárhely: nem olvasható";
         return;
     }
 
-    // A megjegyzett fájl neve (ha van)
-    const fajlNev = localStorage.getItem("lastOpenedFileName");
-
-    let szoveg = "Böngésző tárhely: " + tarhelyMB(osszes) + " MB összesen";
-    if (fajl > 0) {
-        szoveg += " – ebből a megjegyzett fájl" +
-                  (fajlNev ? " (" + fajlNev + ")" : "") +
-                  ": " + tarhelyMB(fajl) + " MB";
-    } else {
-        szoveg += " – nincs megjegyzett fájl";
-    }
-
-    label.textContent = szoveg;
+    label.textContent = "Böngésző tárhely: " + tarhelyMB(osszes) +
+                        " MB összesen (a CSV fájlt a program nem menti)";
 }
 
 // ===== TÁRHELY INFÓ VÉGE =====
